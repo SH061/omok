@@ -9,25 +9,37 @@ const S = {
 const LS = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} }, del: k => { try { localStorage.removeItem(k); } catch (e) {} } };
 
 /* ─── 화면 크기: 설계 크기(휴대폰 844×390, 태블릿 1180×820)로 그리고 통째로 확대·축소 ─── */
+/* 기기 방향: 마지막으로 가로로 들었던 방향을 기억해서, 세로로 돌려도 화면이 기기에 붙어 있는 것처럼 보이게 */
+const devAngle = () => { const a = screen.orientation?.angle ?? window.orientation ?? 0; return ((a % 360) + 360) % 360; };
+let lastLand = 90; // 90 = 윗부분을 왼쪽으로 돌린 가로(가장 흔함), 270 = 오른쪽으로 돌린 가로
 function layout() {
   const vw = innerWidth, vh = innerHeight, long = Math.max(vw, vh), short = Math.min(vw, vh);
   const phone = Math.min(screen.width, screen.height) < 600 || short < 520;
   const H = phone ? 390 : 820;
   const W = Math.round(Math.max(phone ? 720 : 1000, Math.min(phone ? 960 : 1400, H * long / short)));
   const k = Math.min(short / H, long / W);
-  S.dev = phone ? "phone" : "tablet"; S.W = W; S.H = H; S.k = k; S.rot = vh > vw;
+  const ang = devAngle(); if (vw > vh && (ang === 90 || ang === 270)) lastLand = ang;
+  S.dev = phone ? "phone" : "tablet"; S.W = W; S.H = H; S.k = k;
+  S.rot = vh > vw ? (lastLand === 270 ? 1 : -1) : 0;
   stage.style.width = W + "px"; stage.style.height = H + "px";
-  if (S.rot) { S.tx = (vw + H * k) / 2; S.ty = (vh - W * k) / 2; stage.style.transform = `translate(${S.tx}px,${S.ty}px) rotate(90deg) scale(${k})`; }
+  if (S.rot === 1) { S.tx = (vw + H * k) / 2; S.ty = (vh - W * k) / 2; stage.style.transform = `translate(${S.tx}px,${S.ty}px) rotate(90deg) scale(${k})`; }
+  else if (S.rot === -1) { S.tx = (vw - H * k) / 2; S.ty = (vh + W * k) / 2; stage.style.transform = `translate(${S.tx}px,${S.ty}px) rotate(-90deg) scale(${k})`; }
   else { S.tx = (vw - W * k) / 2; S.ty = (vh - H * k) / 2; stage.style.transform = `translate(${S.tx}px,${S.ty}px) scale(${k})`; }
   stage.className = "app " + S.dev;
 }
 /* 화면 좌표 → 무대 좌표 */
 function toLocal(cx, cy) {
-  if (S.rot) return { x: (cy - S.ty) / S.k, y: (S.tx - cx) / S.k };
+  if (S.rot === 1) return { x: (cy - S.ty) / S.k, y: (S.tx - cx) / S.k };
+  if (S.rot === -1) return { x: (S.ty - cy) / S.k, y: (cx - S.tx) / S.k };
   return { x: (cx - S.tx) / S.k, y: (cy - S.ty) / S.k };
 }
-let lastLayout = "";
-addEventListener("resize", () => { const was = S.dev + S.W; layout(); if (was !== S.dev + S.W) render(); });
+const relayout = () => { const was = S.dev + S.W; layout(); if (was !== S.dev + S.W) render(); };
+addEventListener("resize", relayout);
+screen.orientation?.addEventListener?.("change", relayout);
+addEventListener("orientationchange", () => setTimeout(relayout, 250));
+/* 안드로이드: 화면을 처음 누를 때마다(전체 화면이 풀렸으면) 전체 화면 + 가로 고정 다시 요청 */
+addEventListener("pointerdown", () => goFull(), { capture: true });
+document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement) goFull.locked = false; setTimeout(relayout, 200); });
 
 /* ═══ 로그인 ═══ */
 function loginHTML() {
@@ -64,8 +76,10 @@ async function doLogin(ev) {
 function goFull() {
   try {
     const d = document.documentElement;
-    if (!document.fullscreenElement && d.requestFullscreen && S.dev === "phone")
-      d.requestFullscreen({ navigationUI: "hide" }).then(() => screen.orientation?.lock?.("landscape").catch(() => {})).catch(() => {});
+    if (S.dev !== "phone") return;
+    const lock = () => screen.orientation?.lock?.("landscape").catch(() => {});
+    if (document.fullscreenElement) { if (!goFull.locked) { goFull.locked = true; lock(); } return; }
+    if (d.requestFullscreen) d.requestFullscreen({ navigationUI: "hide" }).then(() => { goFull.locked = true; lock(); }).catch(() => {});
   } catch (e) {}
 }
 
