@@ -1,0 +1,120 @@
+/* ═══ 실제 앱 전용 (시안 스타일 위에 덧붙임) ═══ */
+html,body{height:100%}
+body.student{overflow:hidden;background:#0b0d1a;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+#stage{position:fixed;left:0;top:0;transform-origin:0 0;overflow:hidden;background:#10142e}
+#stage input,#stage textarea{-webkit-user-select:text;user-select:text}
+button{font-family:inherit;cursor:pointer}
+.hidden{display:none!important}
+.screen{position:absolute;inset:0}
+
+/* 알림 */
+#toasts{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+#stage #toasts{position:absolute}
+.toast{font:16px Jua;background:#10142ef0;color:#fff;border:2px solid var(--gold2);border-radius:999px;padding:6px 16px;box-shadow:0 6px 16px #0007;animation:pop .25s;transition:opacity .4s,transform .4s;max-width:90vw;text-align:center}
+.toast.err{border-color:#ff5a5f}.toast.ok{border-color:var(--green)}
+.toast.out{opacity:0;transform:translateY(-10px)}
+
+/* 로그인 */
+.lwrap{position:absolute;inset:0;background:#10142e;overflow:hidden}
+.lwrap .lbg{position:absolute;inset:-30px;background:var(--loginimg) center/cover;filter:blur(14px) brightness(.6)}
+.phone .lwrap .lbg{background-image:var(--loginphone)}
+.lbox{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+.lbox .login2{position:absolute;inset:0}
+.login2 input.fld{outline:none;font-family:Pretendard}
+.login2 input.fld:focus{border-color:#2f7bf0;box-shadow:0 0 0 3px #7fc8ff88}
+.login2 input.fld::placeholder{color:#9aa3c7;font-weight:500;letter-spacing:0}
+.login2 button.go{border:0;background:transparent;animation:none;box-shadow:none;cursor:pointer}
+.login2 button.go:active{background:#ffffff30}
+.login2 .lmsg{position:absolute;left:35%;width:30%;top:78.6%;text-align:center;font:14px Jua;color:#fff;text-shadow:0 1px 3px #000}
+.phone .login2 .lmsg{left:38.6%;width:23%;top:82.5%;font-size:11px}
+.login2 .tlink{position:absolute;right:10px;bottom:8px;font:12px Jua;color:#ffffffaa;text-decoration:none;background:#0006;border-radius:8px;padding:2px 8px}
+
+/* 광장 */
+.room .roombg{cursor:pointer}
+.walker{transition:left 1.4s cubic-bezier(.4,.1,.4,1),top 1.4s cubic-bezier(.4,.1,.4,1);pointer-events:none}
+.walker.is-t .nametag{background:#ffd0d0}
+.hud-top .btn,.dd,.chatbar{pointer-events:auto}
+.dd-row{cursor:pointer}
+.dd-body .btn[disabled]{filter:grayscale(1);opacity:.55}
+.chip.gray{background:#c7cce0}
+.walker .avatar{display:block}
+
+/* 매칭 대기 */
+.seats{max-width:100%}
+
+/* 게임 */
+.board.clickable .cell{cursor:pointer}
+.board.clickable .cell:hover:empty:after{content:"";width:70%;height:70%;border-radius:50%;background:#0003}
+.pick{position:absolute;inset:6%;border-radius:50%;border:3px dashed #2fd46b;animation:pulse 1s infinite}
+.st.fresh{animation:pop .35s}
+.timer.hurry{animation:pulse .5s infinite}
+.hand-cards .cimg{cursor:pointer}
+.hand-cards .cimg.dim{filter:grayscale(.8) brightness(.8)}
+.handbox .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.handbox .note{font:12px Jua;color:#ffe27a;text-align:center;max-width:210px}
+.phone .handbox .note{font-size:10px}
+.peek{font:12px Jua;color:#fff;display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:center}
+.peek img{width:26px;border-radius:3px}
+.spec-q .qq{flex:1;min-width:0}
+.feed{pointer-events:none}
+.phone .feed{display:flex;left:8px;right:auto;bottom:8px;max-width:190px}
+.phone .feed div{font-size:10.5px;padding:1px 7px}
+.qtimer{font:22px 'Black Han Sans';color:var(--red)}
+.qbar i{transition:width .2s linear}
+.ox button:disabled{filter:grayscale(.7)}
+.ox button.picked{outline:5px solid var(--gold1)}
+.fx{cursor:pointer}
+.fx .desc{font:600 16px Pretendard;color:#fff;margin-top:22px;position:relative;max-width:80%;word-break:keep-all}
+.phone .fx .desc{font-size:13px;margin-top:14px}
+.phone .fx .cimg{width:120px!important}
+.bk-empty{position:absolute;left:50%;bottom:6%;transform:translateX(-50%);z-index:3;font:15px Jua;color:#fff;background:#000a;border-radius:999px;padding:4px 14px}
+.overlay{position:absolute;inset:0;z-index:15}
+.overlay .dex-head .btn{margin-left:8px}
+.gtop .spec-tag{font:12px Jua;background:#9b5cff;border:2px solid #fff;border-radius:999px;padding:0 8px;white-space:nowrap}
+.win .who .avatar{display:block}
+.confirm{position:absolute;inset:0;z-index:30;background:#070d26b8;display:flex;align-items:center;justify-content:center}
+.confirm .panel{padding:16px 20px;text-align:center;max-width:80%}
+.confirm .panel .t{font:20px Jua;margin:8px 0}
+.confirm .panel .d{font:600 14px Pretendard;color:var(--ink2);margin-bottom:12px;word-break:keep-all}
+.confirm .row{display:flex;gap:10px;justify-content:center}
+.phone .confirm .cimg{width:90px!important}
+
+/* 회전 안내 (교사 휴대폰 등) */
+.rotate-tip{position:fixed;inset:0;z-index:1000;background:#10142e;color:#fff;display:none;align-items:center;justify-content:center;font:22px Jua;text-align:center;padding:20px}
+
+/* ═══ 교사 페이지 ═══ */
+body.tbody{background:#eef1fb;min-height:100vh;overflow:hidden}
+.tbody .teacher{position:fixed}
+.tbody .t-side a{cursor:pointer;user-select:none}
+.tbody .t-main{height:100%}
+.tbody .switch{cursor:pointer}
+.tbody .switch.off i{background:#c7cce0}
+.tbody .switch.off i:after{right:auto;left:2px}
+.tlogin{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bgblur) center/cover}
+.tlogin .panel{padding:24px;width:340px;max-width:92vw;text-align:center}
+.tlogin input{width:100%;font:600 18px Pretendard;padding:10px 14px;border:3px solid #243a66;border-radius:14px;margin:12px 0}
+.tbody .livebox{height:min(640px,calc(100vh - 110px))}
+.tbody.vert-t .livebox{height:520px}
+.livebox .stage-in{position:absolute;left:0;top:0;transform-origin:0 0}
+.tbody .roombox{height:min(640px,calc(100vh - 110px))}
+.tbody .roombox .room .roombg{cursor:default}
+.tbody .grp .m{user-select:none}
+.tbody .grp.over{background:#eef5ff;border-style:dashed}
+.tbody .unassigned{flex-wrap:wrap}
+.tbody .unassigned .m{display:flex;align-items:center;gap:4px;font:600 12.5px Pretendard;background:#f4f6fd;border-radius:8px;padding:1px 6px;cursor:grab}
+.tbody .tb td.num{width:60px}
+.tbody .tb input[type=checkbox]{width:auto}
+.tbody .empty-note{color:var(--ink2);font:14px Jua;padding:14px;text-align:center}
+.tbody textarea.paste{resize:vertical}
+.tbody .t-card .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.tbody .inp{font:600 14px Pretendard;border:2px solid #d7dcf0;border-radius:8px;padding:4px 8px}
+.tbody .chatlog{max-height:340px;overflow:auto}
+.tbody .pop{white-space:normal}
+.tbody .t-live .col-r{display:flex;flex-direction:column;gap:12px;min-height:0;overflow:auto}
+.tbody .no-game{display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:10px;font:18px Jua;color:#fff;background:var(--bgblur) center/cover}
+.walker.clickable{pointer-events:auto;cursor:pointer}
+.tbody .bracket .champ,.tbody .bracket .round h5{color:var(--ink);text-shadow:none}
+.tbody .bracket .round h5{color:var(--gold1)!important}
+.tbody .t-h h2{white-space:nowrap}
+.hand-cards .cback.empty{width:70px}
+.phone .hand-cards .cback.empty{width:50px}
