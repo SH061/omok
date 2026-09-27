@@ -58,16 +58,18 @@ function openEditor(el) {
   editing = el;
   const form = el.form, fields = form ? [...form.querySelectorAll("input")] : [el], idx = fields.indexOf(el), last = idx === fields.length - 1;
   const box = document.createElement("div"); box.id = "kbd";
+  // 게임 화면과 같은 방향으로 돌아가도록 무대 안에 넣고, 키보드가 가리지 않는 쪽에 둠
+  box.className = S.rot === -1 ? "side-r" : S.rot === 1 ? "side-l" : "side-c";
   box.innerHTML = `<form class="kbd-in" autocomplete="off"><div class="kbd-l">${esc(el.dataset.label || el.placeholder || "입력")}</div>
     <div class="kbd-row"><input><button class="btn ${last ? "green" : ""}">${last ? (form?.id === "loginForm" ? "입장!" : "보내기") : "다음 ▶"}</button></div>
     <button type="button" class="kbd-x" aria-label="닫기">✕</button></form>`;
-  document.body.appendChild(box);
+  stage.appendChild(box);
   const inp = box.querySelector("input");
   inp.type = el.type === "password" ? "password" : "text";
   if (el.inputMode) inp.inputMode = el.inputMode;
   if (el.maxLength > 0) inp.maxLength = el.maxLength;
   inp.placeholder = el.placeholder; inp.value = el.value; inp.enterKeyHint = last ? "go" : "next";
-  inp.focus();
+  inp.focus(); try { inp.select(); } catch (e) {}
   const close = () => { box.remove(); editing = null; if (pendingLayout) { pendingLayout = false; setTimeout(relayout, 300); } };
   box.querySelector(".kbd-x").onclick = () => { el.value = inp.value; close(); };
   box.addEventListener("click", e => { if (e.target === box) { el.value = inp.value; close(); } });
