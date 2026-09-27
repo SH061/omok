@@ -38,7 +38,18 @@ addEventListener("resize", relayout);
 screen.orientation?.addEventListener?.("change", relayout);
 addEventListener("orientationchange", () => setTimeout(relayout, 250));
 /* 안드로이드: 화면을 처음 누를 때마다(전체 화면이 풀렸으면) 전체 화면 + 가로 고정 다시 요청 */
-addEventListener("pointerdown", () => goFull(), { capture: true });
+/* 폰에서 터치 시작(pointerdown)은 '사용자 동작'으로 인정되지 않아 두 번 눌러야 했음 → 손을 뗄 때 요청 */
+["pointerup", "touchend", "click"].forEach(ev => addEventListener(ev, () => goFull(), { capture: true }));
+/* 처음 들어오면 한 번 눌러 전체 화면으로 시작하는 안내 */
+const standalone = () => matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches || navigator.standalone;
+function startGate() {
+  if (S.dev !== "phone" || standalone() || document.fullscreenElement || !document.documentElement.requestFullscreen) return;
+  const g = document.createElement("div"); g.id = "gate";
+  g.innerHTML = `<div class="gate-in"><div class="outline" style="font:34px 'Black Han Sans'">1-1반 협동오목</div><div class="gate-btn">👆 화면을 눌러 시작</div><div class="gate-sub">전체 화면 · 가로 고정으로 바뀌어요</div></div>`;
+  const go = () => { goFull(); g.remove(); };
+  g.addEventListener("click", go); g.addEventListener("touchend", go);
+  stage.appendChild(g);
+}
 document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement) goFull.locked = false; setTimeout(relayout, 200); });
 
 /* ═══ 로그인 ═══ */
@@ -86,6 +97,7 @@ function goFull() {
 /* ═══ 시작 ═══ */
 async function boot() {
   layout();
+  setTimeout(startGate, 50);
   const tok = LS.get("omok_token");
   if (tok) {
     try { const me = await rpc("omok_me", { p_token: tok }); if (me && me.role === "student") { S.token = tok; S.me = me; await startApp(); return; } } catch (e) {}

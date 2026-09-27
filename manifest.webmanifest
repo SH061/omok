@@ -1,0 +1,14 @@
+{
+  "name": "1-1반 협동오목",
+  "short_name": "협동오목",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#10142e",
+  "theme_color": "#10142e",
+  "icons": [
+    { "src": "assets/ui/icon192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/ui/icon512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
