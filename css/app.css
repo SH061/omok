@@ -123,3 +123,12 @@ body.tbody{background:#eef1fb;min-height:100vh;overflow:hidden}
 .gate-in{text-align:center;animation:pop .4s}
 .gate-btn{margin:16px auto 8px;font:24px Jua;color:#3a2600;background:linear-gradient(#fff1a8,#ffc21a 55%,#e09200);border:3px solid #6b4300;border-radius:999px;padding:10px 30px;box-shadow:0 5px 0 #6b4300,0 0 24px #ffc21a99;animation:pulse 1.2s infinite;display:inline-block}
 .gate-sub{font:14px Jua;color:#cfd5ff}
+/* 교사: 학생 한 명씩 추가 */
+.addstu{display:grid;grid-template-columns:1fr 1fr 1.2fr .9fr auto;gap:8px;align-items:end}
+.addstu label{display:flex;flex-direction:column;gap:3px;font:13px Jua;color:var(--ink2)}
+.addstu input,.addstu select{font:600 16px Pretendard;border:2px solid #d7dcf0;border-radius:10px;padding:8px 10px;width:100%;min-width:0;background:#fff}
+.addstu input:focus,.addstu select:focus{border-color:#2f7bf0;outline:none}
+.vert .addstu{grid-template-columns:1fr 1fr}
+.vert .addstu .btn{grid-column:1/-1;padding:10px;font-size:18px}
+.tbwrap{overflow-x:auto}
+.vert .tbwrap .tb{min-width:720px}

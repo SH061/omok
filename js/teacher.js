@@ -173,6 +173,7 @@ function chatCard(title, list, game) {
   return `<div style="height:260px;display:flex;flex-shrink:0"><div class="chatbox"><h4>${title}<span>선생님도 참여</span></h4><div class="msgs" id="tmsgs" style="overflow:auto;justify-content:flex-start">${msgsHTML(list)}</div><form class="in" id="${game ? "tgchat" : "tpchat"}"><input maxlength="80" placeholder="선생님 말은 빨간색으로 보여요"><button class="btn xs red">↵</button></form></div></div>`;
 }
 app.addEventListener("submit", async e => {
+  if (e.target.id === "addstu") { e.preventDefault(); try { await addStudent(); } catch (er) { toast(er.message, "err"); } return; }
   const id = e.target.id; if (!["tgchat", "tpchat", "troomchat"].includes(id)) return;
   e.preventDefault(); const inp = e.target.querySelector("input"), t = inp.value.trim(); if (!t) return; inp.value = "";
   try { await rpc("omok_chat_send", { p_token: T.token, p_room: id === "tgchat" ? "game:" + T.gameId : "plaza", p_text: t }); } catch (er) { toast(er.message, "err"); }
@@ -214,14 +215,22 @@ ACTIONS.hideMsg = async a => { await rpc("omok_t_chat_hide", { p_token: T.token,
 function pageStudents(m) {
   const on = online();
   m.innerHTML = `<div class="t-h"><h2>👥 학생 명단</h2><span class="chip">${T.stu.length}명</span><button class="btn xs green" data-act="stuSave">💾 표 저장</button></div>
-   <div class="g2"><div class="t-card"><h3>📋 명단 붙여넣기</h3><textarea class="paste" id="stupaste" placeholder="10101	강하늘	20090312	1&#10;10102	김도윤	20090728	1"></textarea>
+   <div class="g2"><div class="t-card"><h3>➕ 한 명씩 추가 <span class="help" style="margin:0">휴대폰에서 바로</span></h3>
+    <form class="addstu" id="addstu" autocomplete="off">
+     <label>학번<input id="as_id" inputmode="numeric" placeholder="10106" maxlength="10"></label>
+     <label>이름<input id="as_name" placeholder="박지호" maxlength="20"></label>
+     <label>생일 8자리<input id="as_birth" inputmode="numeric" placeholder="20090315" maxlength="10"></label>
+     <label>조<select id="as_grp"><option value="">나중에</option>${DATA.groups.map(g => `<option value="${g.grp}">${esc(g.name)}</option>`).join("")}</select></label>
+     <button class="btn sm green">➕ 추가</button></form>
+    <div class="help">추가하면 칸이 비워져서 다음 학생을 바로 적을 수 있어요. 같은 학번을 다시 적으면 그 학생 정보가 바뀌어요.</div></div>
+   <div class="t-card"><h3>📋 명단 붙여넣기 (엑셀)</h3><textarea class="paste" id="stupaste" placeholder="10101	강하늘	20090312	1&#10;10102	김도윤	20090728	1"></textarea>
     <div class="help">엑셀에서 [학번 · 이름 · 생일 8자리 · 조(비워도 됨)] 순서로 복사 → 붙여넣기 → [명단 반영]. 같은 학번은 덮어써요.</div><button class="btn xs" data-act="stuPaste" style="margin-top:6px">명단 반영</button></div>
-   <div class="t-card"><h3>ℹ️ 안내</h3><div class="help" style="font-size:13px">· 학생은 <b>학번 · 이름 · 생일 8자리</b>로 들어와요.<br>· 생일은 선생님만 볼 수 있어요 (학생 화면에서는 절대 안 보여요).<br>· 캐릭터 이미지는 그림 주소(URL)를 넣으면 그 그림으로 바뀌어요. 비우면 자동 캐릭터예요.<br>· 조는 [🧩 조 편성]에서 끌어서 바꾸는 게 편해요.</div></div></div>
-   <div class="t-card"><h3>🧑‍🎓 학생 <span class="help" style="margin:0">칸을 고친 뒤 [💾 표 저장]</span></h3>${T.stu.length ? `<table class="tb" id="stutb"><tr><th>접속</th><th>학번</th><th>이름</th><th>생일</th><th>조</th><th>캐릭터 이미지 주소</th><th>채팅</th><th></th></tr>
+   </div>
+   <div class="t-card"><h3>🧑‍🎓 학생 <span class="help" style="margin:0">칸을 고친 뒤 [💾 표 저장]</span></h3>${T.stu.length ? `<div class="tbwrap"><table class="tb" id="stutb"><tr><th>접속</th><th>학번</th><th>이름</th><th>생일</th><th>조</th><th>캐릭터 이미지 주소</th><th>채팅</th><th></th></tr>
     ${T.stu.map(s => `<tr data-id="${esc(s.id)}"><td>${on[s.id] ? "🟢" : "⚪"}</td><td>${esc(s.id)}</td><td><input data-f="name" value="${esc(s.name)}"></td><td><input data-f="birth" type="password" value="${esc(s.birth)}" style="width:100px" onfocus="this.type='text'" onblur="this.type='password'"></td>
      <td><select data-f="grp"><option value="">-</option>${DATA.groups.map(g => `<option value="${g.grp}" ${g.grp === s.grp ? "selected" : ""}>${esc(g.name)}</option>`).join("")}</select></td>
      <td style="display:flex;gap:4px;align-items:center">${avatar(s.id, 20, null, s.avatar)}<input data-f="avatar" value="${esc(s.avatar || "")}" placeholder="비우면 자동"></td>
-     <td><button class="btn xs ${s.muted ? "green" : "white"}" data-act="mute" data-id="${esc(s.id)}" data-v="${s.muted ? 0 : 1}">${s.muted ? "🔊 허용" : "🔇 금지"}</button></td><td><button class="btn xs gray" data-act="stuDel" data-id="${esc(s.id)}">삭제</button></td></tr>`).join("")}</table>` : `<div class="empty-note">아직 학생이 없어요. 왼쪽 위에 명단을 붙여넣어 주세요.</div>`}</div>`;
+     <td><button class="btn xs ${s.muted ? "green" : "white"}" data-act="mute" data-id="${esc(s.id)}" data-v="${s.muted ? 0 : 1}">${s.muted ? "🔊 허용" : "🔇 금지"}</button></td><td><button class="btn xs gray" data-act="stuDel" data-id="${esc(s.id)}">삭제</button></td></tr>`).join("")}</table></div>` : `<div class="empty-note">아직 학생이 없어요. 왼쪽 위에 명단을 붙여넣어 주세요.</div>`}</div>`;
   m.oninput = () => { T.dirty = true; };
 }
 ACTIONS.stuPaste = async () => {
@@ -232,6 +241,18 @@ ACTIONS.stuPaste = async () => {
   const n = await rpc("omok_t_students_save", { p_token: T.token, p_rows: rows.map(c => ({ id: c[0], name: c[1], birth: c[2] || "", grp: c[3] ? String(parseInt(c[3])) : (T.stu.find(s => s.id === c[0])?.grp ?? "") })) });
   await Promise.all([loadStudents(), loadRoster()]); T.dirty = false; toast(`${n}명 반영했어요`, "ok"); render();
 };
+async function addStudent() {
+  const id = $("#as_id").value.trim(), name = $("#as_name").value.trim(), birth = $("#as_birth").value.replace(/\D/g, ""), grp = $("#as_grp").value;
+  if (!/^\w{3,10}$/.test(id)) { $("#as_id").focus(); return toast("학번을 적어 주세요", "err"); }
+  if (!name) { $("#as_name").focus(); return toast("이름을 적어 주세요", "err"); }
+  if (!/^\d{8}$/.test(birth)) { $("#as_birth").focus(); return toast("생일은 8자리 숫자예요 (예: 20090315)", "err"); }
+  const old = T.stu.find(s => s.id === id);
+  if (old && !confirm(`${id} ${old.name} 학생이 이미 있어요. ${name}(으)로 바꿀까요?`)) return;
+  await rpc("omok_t_students_save", { p_token: T.token, p_rows: [{ id, name, birth, grp: grp || (old?.grp != null ? String(old.grp) : "") }] });
+  await Promise.all([loadStudents(), loadRoster()]);
+  toast(`${name} 학생을 ${old ? "고쳤어요" : "추가했어요"} (총 ${T.stu.length}명)`, "ok");
+  const keepGrp = grp; render(); $("#as_grp").value = keepGrp; $("#as_id").value = String(+id + 1 || ""); $("#as_name").focus();
+}
 ACTIONS.stuSave = async () => {
   const rows = $$("#stutb tr[data-id]").map(tr => { const g = f => tr.querySelector(`[data-f="${f}"]`).value; return { id: tr.dataset.id, name: g("name"), birth: g("birth"), grp: g("grp"), avatar: g("avatar") }; });
   if (rows.some(r => !r.name.trim())) return toast("이름이 빈 학생이 있어요", "err");
