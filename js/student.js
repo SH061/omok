@@ -9,35 +9,27 @@ const S = {
 const LS = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} }, del: k => { try { localStorage.removeItem(k); } catch (e) {} } };
 
 /* ─── 화면 크기: 설계 크기(휴대폰 844×390, 태블릿 1180×820)로 그리고 통째로 확대·축소 ─── */
-/* 기기 방향: 마지막으로 가로로 들었던 방향을 기억해서, 세로로 돌려도 화면이 기기에 붙어 있는 것처럼 보이게 */
-const devAngle = () => { const a = screen.orientation?.angle ?? window.orientation ?? 0; return ((a % 360) + 360) % 360; };
-let lastLand = 90; // 90 = 윗부분을 왼쪽으로 돌린 가로(가장 흔함), 270 = 오른쪽으로 돌린 가로
+/* 세로로 들면 세로 화면(390 너비), 가로로 들면 가로 화면. 화면을 돌려서 보여주지 않음 */
 function layout() {
   const vw = innerWidth, vh = innerHeight, long = Math.max(vw, vh), short = Math.min(vw, vh);
+  const portrait = vh > vw;
   const phone = Math.min(screen.width, screen.height) < 600 || short < 520;
-  const H = phone ? 390 : 820;
-  const W = Math.round(Math.max(phone ? 720 : 1000, Math.min(phone ? 960 : 1400, H * long / short)));
-  const k = Math.min(short / H, long / W);
-  const ang = devAngle(); if (vw > vh && (ang === 90 || ang === 270)) lastLand = ang;
-  S.dev = phone ? "phone" : "tablet"; S.W = W; S.H = H; S.k = k;
-  S.rot = vh > vw ? (lastLand === 270 ? 1 : -1) : 0;
+  let W, H;
+  if (portrait) { W = 390; H = Math.round(Math.max(680, Math.min(900, 390 * vh / vw))); }
+  else { H = phone ? 390 : 820; W = Math.round(Math.max(phone ? 720 : 1000, Math.min(phone ? 960 : 1400, H * long / short))); }
+  const k = Math.min(vw / W, vh / H);
+  S.vert = portrait; S.dev = portrait || phone ? "phone" : "tablet"; S.W = W; S.H = H; S.k = k; S.rot = 0;
   stage.style.width = W + "px"; stage.style.height = H + "px";
-  if (S.rot === 1) { S.tx = (vw + H * k) / 2; S.ty = (vh - W * k) / 2; stage.style.transform = `translate(${S.tx}px,${S.ty}px) rotate(90deg) scale(${k})`; }
-  else if (S.rot === -1) { S.tx = (vw - H * k) / 2; S.ty = (vh + W * k) / 2; stage.style.transform = `translate(${S.tx}px,${S.ty}px) rotate(-90deg) scale(${k})`; }
-  else { S.tx = (vw - W * k) / 2; S.ty = (vh - H * k) / 2; stage.style.transform = `translate(${S.tx}px,${S.ty}px) scale(${k})`; }
-  stage.className = "app " + S.dev;
+  S.tx = (vw - W * k) / 2; S.ty = (vh - H * k) / 2; stage.style.transform = `translate(${S.tx}px,${S.ty}px) scale(${k})`;
+  stage.className = "app " + S.dev + (portrait ? " vert" : "");
 }
 /* 화면 좌표 → 무대 좌표 */
-function toLocal(cx, cy) {
-  if (S.rot === 1) return { x: (cy - S.ty) / S.k, y: (S.tx - cx) / S.k };
-  if (S.rot === -1) return { x: (S.ty - cy) / S.k, y: (cx - S.tx) / S.k };
-  return { x: (cx - S.tx) / S.k, y: (cy - S.ty) / S.k };
-}
+function toLocal(cx, cy) { return { x: (cx - S.tx) / S.k, y: (cy - S.ty) / S.k }; }
 /* 입력 중(키보드가 떠서 화면 높이가 줄어듦)에는 화면을 다시 그리지 않음 — 다시 그리면 적던 글자가 지워짐 */
 let pendingLayout = false;
 const relayout = () => {
   if (editing) { pendingLayout = true; return; }
-  const was = S.dev + S.W; layout(); if (was !== S.dev + S.W) render();
+  const was = S.dev + S.W + S.vert; layout(); if (was !== S.dev + S.W + S.vert) render();
 };
 addEventListener("resize", relayout);
 screen.orientation?.addEventListener?.("change", relayout);
@@ -59,7 +51,7 @@ function openEditor(el) {
   const form = el.form, fields = form ? [...form.querySelectorAll("input")] : [el], idx = fields.indexOf(el), last = idx === fields.length - 1;
   const box = document.createElement("div"); box.id = "kbd";
   // 게임 화면과 같은 방향으로 돌아가도록 무대 안에 넣고, 키보드가 가리지 않는 쪽에 둠
-  box.className = S.rot === -1 ? "side-r" : S.rot === 1 ? "side-l" : "side-c";
+  box.className = "side-c";
   box.innerHTML = `<form class="kbd-in" autocomplete="off"><div class="kbd-l">${esc(el.dataset.label || el.placeholder || "입력")}</div>
     <div class="kbd-row"><input><button class="btn ${last ? "green" : ""}">${last ? (form?.id === "loginForm" ? "입장!" : "보내기") : "다음 ▶"}</button></div>
     <button type="button" class="kbd-x" aria-label="닫기">✕</button></form>`;
@@ -84,9 +76,9 @@ function openEditor(el) {
 /* 처음 들어오면 한 번 눌러 전체 화면으로 시작하는 안내 */
 const standalone = () => matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches || navigator.standalone;
 function startGate() {
-  if (S.dev !== "phone" || standalone() || document.fullscreenElement || !document.documentElement.requestFullscreen) return;
+  if (!touchUI || standalone() || document.fullscreenElement || !document.documentElement.requestFullscreen) return;
   const g = document.createElement("div"); g.id = "gate";
-  g.innerHTML = `<div class="gate-in"><div class="outline" style="font:34px 'Black Han Sans'">1-1반 협동오목</div><div class="gate-btn">👆 화면을 눌러 시작</div><div class="gate-sub">전체 화면 · 가로 고정으로 바뀌어요</div></div>`;
+  g.innerHTML = `<div class="gate-in"><div class="outline" style="font:34px 'Black Han Sans'">1-1반 협동오목</div><div class="gate-btn">👆 화면을 눌러 시작</div><div class="gate-sub">전체 화면으로 바뀌어요</div></div>`;
   const go = () => { goFull(); g.remove(); };
   g.addEventListener("click", go); g.addEventListener("touchend", go);
   stage.appendChild(g);
@@ -94,7 +86,26 @@ function startGate() {
 document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement) goFull.locked = false; setTimeout(relayout, 200); });
 
 /* ═══ 로그인 ═══ */
+/* 세로 로그인: 태블릿 첫 화면에서 로고+로그인 창 부분만 잘라 세로로 배치 (입력칸이 커짐) */
+function loginVertHTML() {
+  const cw = 360, s = cw / 365, ch = Math.round(545 * s), top = Math.max(40, Math.round((S.H - ch) * .32));
+  const fld = (cls, id, extra, ph, t, l = 8.3, w = 83.6) => `<input class="fld ${cls}" id="${id}" ${extra} placeholder="${ph}" style="left:${l}%;width:${w}%;top:${t}%;height:7%;font-size:17px">`;
+  return `<div class="lwrap"><div class="lbg"></div>
+    <div class="wclock" style="left:86%;top:${Math.max(4, top / S.H * 100 - 3)}%">${wallClock(44)}</div>
+    <form class="login2 vcol" id="loginForm" autocomplete="off" style="left:${(S.W - cw) / 2}px;top:${top}px;width:${cw}px;height:${ch}px">
+      <div class="art" style="background-size:${1024 * s}px auto;background-position:${-330 * s}px ${-35 * s}px"></div>
+      ${fld("f1", "lid", `data-label="학번" inputmode="numeric" maxlength="10" value="${esc(LS.get("omok_lastid") || "")}"`, "학번 (예: 10106)", 48.6)}
+      ${fld("f2", "lname", `data-label="이름" maxlength="20"`, "이름", 61.8)}
+      ${fld("f3", "lbirth", `data-label="생일 8자리 (예: 20090315)" type="password" inputmode="numeric" maxlength="10"`, "생일 8자리 (예: 20090315)", 74.9)}
+      <button class="go" type="submit" aria-label="우리반 입장" style="left:7.8%;width:84.8%;top:84.8%;height:9.6%"></button>
+    </form>
+    <div class="lmsg" id="lmsg" style="top:${top + ch + 6}px"></div>
+    <div class="lcard" style="left:24%;top:${Math.min(90, (top + ch + 110) / S.H * 100)}%;transform:translate(-50%,-50%) rotate(-9deg)">${card("roulette", { w: 96 })}</div>
+    <div class="lcard sm" style="left:76%;top:${Math.min(90, (top + ch + 110) / S.H * 100)}%;transform:translate(-50%,-50%) rotate(7deg)">${card("swap", { w: 86 })}</div>
+    <a class="tlink" href="teacher.html">교사</a></div>`;
+}
 function loginHTML() {
+  if (S.vert) return loginVertHTML();
   const ph = S.dev === "phone";
   const ratio = ph ? 1346 / 622 : 1024 / 707;
   const w = Math.min(S.W, S.H * ratio), h = w / ratio;
@@ -128,8 +139,8 @@ async function doLogin(ev) {
 function goFull() {
   try {
     const d = document.documentElement;
-    if (S.dev !== "phone") return;
-    const lock = () => screen.orientation?.lock?.("landscape").catch(() => {});
+    if (!touchUI) return;
+    const lock = () => screen.orientation?.lock?.(innerHeight > innerWidth ? "portrait" : "landscape").catch(() => {});
     if (document.fullscreenElement) { if (!goFull.locked) { goFull.locked = true; lock(); } return; }
     if (d.requestFullscreen) d.requestFullscreen({ navigationUI: "hide" }).then(() => { goFull.locked = true; lock(); }).catch(() => {});
   } catch (e) {}
@@ -198,7 +209,7 @@ const online = () => { const o = {}; for (const [k, v] of Object.entries(S.prese
 
 function plazaHTML() {
   const P = S.dev === "phone";
-  return `<div class="room" id="room"><div class="roombg" id="roombg"></div><div class="warm"></div><div id="walkers"></div><div id="tapmark"></div>
+  return `<div class="room" id="room"><div class="roombg ${S.vert ? "vert" : ""}" id="roombg"></div><div class="warm"></div><div id="walkers"></div><div id="tapmark"></div>
     <div class="hud-top" id="hud"></div><div id="menuwrap"></div>
     <form class="chatbar" id="chatbar"><input id="chatin" maxlength="80" placeholder="${S.me.muted ? "선생님이 채팅을 막았어요" : "채팅하면 내 머리 위에 말풍선으로 떠요"}" ${S.me.muted ? "disabled" : ""}><button class="btn purple">${P ? "↵" : "보내기"}</button></form>
     <div id="dimwrap"></div></div>`;
@@ -208,13 +219,13 @@ function renderPlazaHud() {
   const on = DATA.settings.game_enabled !== false && DATA.settings.game_enabled !== "false";
   const n = Object.keys(online()).filter(k => k !== "teacher").length;
   hud.innerHTML = `<span class="plate">🏫 우리반</span><span class="chip ${on ? "green" : "gray"}">${on ? "🎮 게임 가능" : "⛔ 게임 쉬는 중"}</span><span class="chip">👥 ${n}명</span>
-    <span class="me-chip" id="mechip">${av(S.me.id, 24)}${esc(S.me.name)}</span><button class="btn sm ${S.menu ? "gold" : "white"} menu-btn" id="menubtn">${S.menu ? "✕" : "☰"}${S.dev === "phone" ? "" : " 메뉴"}</button>`;
+    ${S.vert ? "" : `<span class="me-chip" id="mechip">${av(S.me.id, 24)}${esc(S.me.name)}</span>`}<button class="btn sm ${S.menu ? "gold" : "white"} menu-btn" id="menubtn" ${S.vert ? 'style="margin-left:auto"' : ""}>${S.menu ? "✕" : "☰"}${S.dev === "phone" ? "" : " 메뉴"}</button>`;
   renderMenu(); renderMatchWait();
 }
-function floorY(y) { return Math.max(64, Math.min(95, y)); }
+function floorY(y) { return S.vert ? Math.max(70, Math.min(92, y)) : Math.max(64, Math.min(95, y)); }
 function updateWalkers() {
   const box = $("#walkers"); if (!box) return;
-  const on = online(), sz = S.dev === "phone" ? 32 : 54, seen = new Set();
+  const on = online(), sz = S.vert ? 40 : S.dev === "phone" ? 32 : 54, seen = new Set();
   const qset = new Set(DATA.queue.map(q => q.sid));
   for (const [id, m] of Object.entries(on)) {
     seen.add(id);
@@ -445,6 +456,12 @@ function boardScreen(G) {
   let over = "";
   if (myTurn && G.phase === "quiz" && G.quiz) over = quizHTML(G);
   else if (G.phase === "mission" && G.mission) over = missionHTML(G);
+  if (S.vert) {
+    const bottom = player ? handRowHTML(G, mt, myTurn) : chatboxHTML();
+    const last1 = S.feed.length ? `<div class="feed1">${esc(S.feed[S.feed.length - 1])}</div>` : "";
+    return `<div class="g">${top}<div class="strip2">${teamBox(G, 0, { mini: true, qres })}${teamBox(G, 1, { mini: true, qres })}</div>
+      <div class="boardbox">${sq && !(myTurn && G.phase === "quiz") ? sq : ""}${hint ? `<div class="hint">${hint}</div>` : ""}${bo}${last1}</div>${bottom}</div>${over}`;
+  }
   return `<div class="g">${top}<div class="col">${teamBox(G, 0, { qres })}${teamBox(G, 1, { qres })}</div>
     <div class="boardbox">${!PH && sq && !(myTurn && G.phase === "quiz") ? sq.replace('class="spec-q"', 'class="spec-q" style="max-width:680px"') : ""}${hint ? `<div class="hint">${hint}</div>` : ""}${bo}</div>
     <div class="col">${right}</div>${feed}</div>${over}`;
@@ -452,7 +469,7 @@ function boardScreen(G) {
 function handHTML(G, mt, myTurn) {
   const hand = S.view?.hand || [], PH = S.dev === "phone", cw = PH ? 88 : 140;
   const canUse = myTurn && G.phase === "action" && !G.turn?.card && !(G.turn?.placed > 0);
-  const cards = hand.map(c => card(c.k, { w: cw, cls: (S.pick?.uid === c.u ? "sel" : "shine") + (canUse ? "" : " dim"), attrs: `data-card="${c.u}"` })).join("") || `${back("empty")}`;
+  const cards = hand.map(c => card(c.k, { w: cw, cls: (S.pick?.uid === c.u ? "sel" : "shine") + (canUse ? "" : " cant"), attrs: `data-card="${c.u}"` })).join("") || `${back("empty")}`;
   let note = "";
   if (hand.length > 2) note = `<div class="note">⚠ 카드가 ${hand.length}장! 차례가 끝나면 넘친 카드는 무작위로 버려져요${myTurn ? " — 한 장을 쓰거나 버린 뒤 돌을 놓으세요" : ""}</div>`;
   else if (myTurn && G.phase === "action" && G.turn?.card) note = `<div class="note">카드를 썼어요. 이제 돌을 놓으세요!</div>`;
@@ -460,6 +477,14 @@ function handHTML(G, mt, myTurn) {
   const peek = S.view?.peek && S.view.peek.turn_no >= G.turn_no - 2 ? `<div class="peek">🔭 상대 카드: ${(S.view.peek.cards || []).map(c => `<img src="${cardImg(c.k)}" title="${CARD[c.k][0]}">`).join("") || "없음"}</div>` : "";
   return `<div class="handbox"><div class="lbl">🃏 우리 팀 카드함${PH ? "" : " (팀원만 보여요)"}</div><div class="cards hand-cards">${cards}</div>${note}${peek}
     ${S.pick ? `<div class="acts"><button class="btn xs gray" data-act="cancelpick">카드 취소</button></div>` : ""}</div>`;
+}
+function handRowHTML(G, mt, myTurn) {
+  const hand = S.view?.hand || [];
+  const canUse = myTurn && G.phase === "action" && !G.turn?.card && !(G.turn?.placed > 0);
+  const cards = hand.map(c => card(c.k, { w: 88, cls: (S.pick?.uid === c.u ? "sel" : "shine") + (canUse ? "" : " cant"), attrs: `data-card="${c.u}"` })).join("") || back("empty");
+  const note = hand.length > 2 ? `⚠ 카드 ${hand.length}장! 하나를 쓰거나 버리세요` : myTurn && G.phase === "action" && G.turn?.card ? "카드를 썼어요. 돌을 놓으세요!" : myTurn && G.phase === "action" && hand.length ? "카드를 누르면 쓸 수 있어요 (돌 놓기 전)" : "🃏 우리 팀 카드함";
+  const peek = S.view?.peek && S.view.peek.turn_no >= G.turn_no - 2 ? `<div class="peek">🔭 ${(S.view.peek.cards || []).map(c => `<img src="${cardImg(c.k)}">`).join("") || "없음"}</div>` : "";
+  return `<div class="handrow"><div class="hand-cards" style="display:flex;gap:8px">${cards}</div><div class="acts"><div class="hnote">${note}</div>${peek}${S.pick ? `<button class="btn xs gray" data-act="cancelpick">카드 취소</button>` : ""}</div></div>`;
 }
 function quizHTML(G) {
   const started = now() >= new Date(G.quiz.start).getTime();
@@ -494,7 +519,7 @@ function winHTML(G) {
 
 /* 오버레이: 대진표·카드도감 */
 function overlayHTML() {
-  if (S.overlay === "bracket") return `<div class="overlay"><div class="dex"><div class="dex-head"><div class="outline" style="font:24px Jua">🏆 1-1반 협동오목 토너먼트</div><button class="btn xs white" data-act="closeov" style="margin-left:auto">✕</button></div><div style="flex:1;min-height:0">${bracketGame(S.dev)}</div></div></div>`;
+  if (S.overlay === "bracket") return `<div class="overlay"><div class="dex"><div class="dex-head"><div class="outline" style="font:24px Jua">🏆 1-1반 협동오목 토너먼트</div><button class="btn xs white" data-act="closeov" style="margin-left:auto">✕</button></div><div style="flex:1;min-height:0;overflow:auto">${S.vert ? bracketList() : bracketGame(S.dev)}</div></div></div>`;
   if (S.overlay?.startsWith("dex")) {
     const gold = S.overlay === "dexg", W = DATA.settings.weights || {};
     const set = gold ? W.golden || {} : W.chance || {}, tot = Object.values(set).reduce((a, b) => a + Math.max(0, +b), 0) || 1;

@@ -49,7 +49,7 @@ button{font-family:inherit;cursor:pointer}
 .st.fresh{animation:pop .35s}
 .timer.hurry{animation:pulse .5s infinite}
 .hand-cards .cimg{cursor:pointer}
-.hand-cards .cimg.dim{filter:grayscale(.8) brightness(.8)}
+.hand-cards .cimg.cant{filter:grayscale(.8) brightness(.8)}
 .handbox .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
 .handbox .note{font:12px Jua;color:#ffe27a;text-align:center;max-width:210px}
 .phone .handbox .note{font-size:10px}
@@ -119,7 +119,7 @@ body.tbody{background:#eef1fb;min-height:100vh;overflow:hidden}
 .hand-cards .cback.empty{width:70px}
 .phone .hand-cards .cback.empty{width:50px}
 /* 처음 들어올 때 전체 화면 시작 안내 */
-#gate{position:absolute;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,#10142ecc,#05071aee),var(--loginphone) center/cover;cursor:pointer}
+#gate{position:absolute;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,#10142ecc,#05071aee),var(--loginimg) center/cover;cursor:pointer}
 .gate-in{text-align:center;animation:pop .4s}
 .gate-btn{margin:16px auto 8px;font:24px Jua;color:#3a2600;background:linear-gradient(#fff1a8,#ffc21a 55%,#e09200);border:3px solid #6b4300;border-radius:999px;padding:10px 30px;box-shadow:0 5px 0 #6b4300,0 0 24px #ffc21a99;animation:pulse 1.2s infinite;display:inline-block}
 .gate-sub{font:14px Jua;color:#cfd5ff}
@@ -144,3 +144,53 @@ body.tbody{background:#eef1fb;min-height:100vh;overflow:hidden}
 .kbd-row input:focus{border-color:#2f7bf0;box-shadow:0 0 0 3px #7fc8ff88}
 .kbd-row .btn{font-size:17px;padding:6px 14px}
 .kbd-x{position:absolute;right:8px;top:6px;border:0;background:none;font:20px Jua;color:#4a5173;cursor:pointer}
+/* ═══ 세로 화면 (휴대폰을 세로로 들었을 때) ═══ */
+.vert .g{padding-top:0!important;background:transparent!important}
+.vert .g{grid-template-columns:1fr;grid-template-rows:auto auto minmax(0,1fr) auto}
+.vert .gtop{min-height:48px}
+.vert .strip2{padding:6px 8px 4px}
+.vert .boardbox{padding:4px 8px;gap:6px;justify-content:center}
+.vert .board{width:100%;height:auto;max-height:100%}
+.vert .spec-q{font-size:12.5px;padding:4px 8px}
+.vert .hint{font-size:13px}
+.vert .feed1{font:12px Jua;color:#fff;background:#000a;border-radius:999px;padding:2px 10px;border-left:4px solid var(--gold2);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vert .feed{display:none}
+.vert .handrow{padding:8px 10px 12px;background:linear-gradient(#1c2f5ecc,#0e1a3dd9);border-top:3px solid #c9a24a}
+.vert .handrow .cback{width:66px}
+.vert .handrow .acts{flex:1;align-items:flex-end;text-align:right}
+.vert .hnote{font:12px Jua;color:#ffe27a}
+.vert .chatbox{height:190px;border-radius:14px 14px 0 0}
+.vert .quiz{width:94%;padding:14px}
+.vert .qtext{font-size:21px}
+.vert .ox button{height:130px;font-size:84px}
+.vert .hud-top{top:8px}
+.vert .dd{top:52px;max-height:70%;overflow:auto}
+.vert .chatbar{bottom:10px}
+.vert .walker .nametag{font-size:11px}
+.vert .win .wt{font-size:48px}
+.vert .dex-head .outline{font-size:20px!important}
+.vert .overlay .bracket{padding:10px}
+/* 세로 로그인 */
+.login2.vcol{position:absolute;inset:auto;background:transparent;-webkit-mask:linear-gradient(to right,transparent,#000 6%,#000 94%,transparent),linear-gradient(to bottom,transparent,#000 7%,#000 95%,transparent);-webkit-mask-composite:source-in;mask:linear-gradient(to right,transparent,#000 6%,#000 94%,transparent),linear-gradient(to bottom,transparent,#000 7%,#000 95%,transparent);mask-composite:intersect}
+.login2.vcol .art{background-image:var(--loginimg);background-repeat:no-repeat}
+.vert .lwrap .lbg{background-image:var(--loginimg)}
+.vert .lwrap .lmsg{position:absolute;left:0;right:0;text-align:center;font:15px Jua;color:#fff;text-shadow:0 1px 3px #000}
+.vert .lwrap .lcard{z-index:2}
+.vert .roombg{background:linear-gradient(transparent 68%,#6b401c55 74%,transparent 80%),var(--classroom) 50% 0/auto 74% no-repeat,var(--classroom) 50% 100%/auto 88% no-repeat,#a86c38!important}
+/* 세로: 가로 휴대폰 규칙 덮어쓰기 */
+.vert .quiz{display:block;width:94%;max-width:420px;text-align:center;padding:16px}
+.vert .qhead{justify-content:center;flex-wrap:wrap}
+.vert .qtext{font-size:21px;margin:12px 0}
+.vert .qbar{margin:0 0 14px}
+.vert .ox{grid-template-columns:1fr 1fr}
+.vert .ox button{height:130px;font-size:84px}
+.vert .dd{left:10px;right:10px;width:auto;max-height:75%}
+.vert .dex-grid{grid-template-columns:repeat(3,1fr);gap:22px 10px;padding:14px 12px}
+.vert .vs-side.a{left:0;right:0;top:0;bottom:auto;width:auto;height:56%;clip-path:polygon(0 0,100% 0,100% 78%,0 100%);padding:0 0 12%}
+.vert .vs-side.b{left:0;right:0;top:auto;bottom:0;width:auto;height:56%;clip-path:polygon(0 22%,100% 0,100% 100%,0 100%);padding:12% 0 0}
+.vert .vs-count{top:50%;transform:translateY(-50%)}
+.vert .vs-mid{top:36%}
+.vert .vs-team{font-size:40px}
+.vert .mission-box{width:92%}
+.vert .fx .big{font-size:32px}
+.vert .match-card{width:92%}
