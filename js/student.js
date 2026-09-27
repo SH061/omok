@@ -33,13 +33,52 @@ function toLocal(cx, cy) {
   if (S.rot === -1) return { x: (S.ty - cy) / S.k, y: (cx - S.tx) / S.k };
   return { x: (cx - S.tx) / S.k, y: (cy - S.ty) / S.k };
 }
-const relayout = () => { const was = S.dev + S.W; layout(); if (was !== S.dev + S.W) render(); };
+/* 입력 중(키보드가 떠서 화면 높이가 줄어듦)에는 화면을 다시 그리지 않음 — 다시 그리면 적던 글자가 지워짐 */
+let pendingLayout = false;
+const relayout = () => {
+  if (editing) { pendingLayout = true; return; }
+  const was = S.dev + S.W; layout(); if (was !== S.dev + S.W) render();
+};
 addEventListener("resize", relayout);
 screen.orientation?.addEventListener?.("change", relayout);
 addEventListener("orientationchange", () => setTimeout(relayout, 250));
 /* 안드로이드: 화면을 처음 누를 때마다(전체 화면이 풀렸으면) 전체 화면 + 가로 고정 다시 요청 */
 /* 폰에서 터치 시작(pointerdown)은 '사용자 동작'으로 인정되지 않아 두 번 눌러야 했음 → 손을 뗄 때 요청 */
-["pointerup", "touchend", "click"].forEach(ev => addEventListener(ev, () => goFull(), { capture: true }));
+["pointerup", "touchend", "click"].forEach(ev => addEventListener(ev, e => { if (!e.target.closest?.("input,select,textarea,#kbd")) goFull(); }, { capture: true }));
+
+/* ─── 휴대폰·태블릿 글자 입력: 화면 위쪽에 따로 뜨는 입력칸 (키보드·화면 회전에 영향 안 받음) ─── */
+const touchUI = matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
+let editing = null;
+stage.addEventListener("focusin", e => {
+  const el = e.target;
+  if (!touchUI || el.tagName !== "INPUT" || editing) return;
+  el.blur(); openEditor(el);
+});
+function openEditor(el) {
+  editing = el;
+  const form = el.form, fields = form ? [...form.querySelectorAll("input")] : [el], idx = fields.indexOf(el), last = idx === fields.length - 1;
+  const box = document.createElement("div"); box.id = "kbd";
+  box.innerHTML = `<form class="kbd-in" autocomplete="off"><div class="kbd-l">${esc(el.dataset.label || el.placeholder || "입력")}</div>
+    <div class="kbd-row"><input><button class="btn ${last ? "green" : ""}">${last ? (form?.id === "loginForm" ? "입장!" : "보내기") : "다음 ▶"}</button></div>
+    <button type="button" class="kbd-x" aria-label="닫기">✕</button></form>`;
+  document.body.appendChild(box);
+  const inp = box.querySelector("input");
+  inp.type = el.type === "password" ? "password" : "text";
+  if (el.inputMode) inp.inputMode = el.inputMode;
+  if (el.maxLength > 0) inp.maxLength = el.maxLength;
+  inp.placeholder = el.placeholder; inp.value = el.value; inp.enterKeyHint = last ? "go" : "next";
+  inp.focus();
+  const close = () => { box.remove(); editing = null; if (pendingLayout) { pendingLayout = false; setTimeout(relayout, 300); } };
+  box.querySelector(".kbd-x").onclick = () => { el.value = inp.value; close(); };
+  box.addEventListener("click", e => { if (e.target === box) { el.value = inp.value; close(); } });
+  box.querySelector("form").onsubmit = ev => {
+    ev.preventDefault();
+    const cur = (el.id && document.getElementById(el.id)) || el; cur.value = inp.value; close();
+    const f = cur.form;
+    if (!last) openEditor((f && f.querySelectorAll("input")[idx + 1]) || fields[idx + 1]);
+    else if (f) f.requestSubmit ? f.requestSubmit() : f.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+  };
+}
 /* 처음 들어오면 한 번 눌러 전체 화면으로 시작하는 안내 */
 const standalone = () => matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches || navigator.standalone;
 function startGate() {
@@ -65,9 +104,9 @@ function loginHTML() {
   const fs = ph ? 12 : Math.round(19 * w / 1180);
   return `<div class="lwrap"><div class="lbg"></div><div class="lbox" style="width:${w}px;height:${h}px">
     <form class="login2 ${ph ? "ph" : ""}" id="loginForm" autocomplete="off"><div class="art"></div>${clock}${cards}
-      <input class="fld f1" id="lid" inputmode="numeric" placeholder="학번 (예: 10106)" style="font-size:${fs}px" value="${esc(LS.get("omok_lastid") || "")}">
-      <input class="fld f2" id="lname" placeholder="이름" style="font-size:${fs}px">
-      <input class="fld f3" id="lbirth" type="password" inputmode="numeric" placeholder="생일 8자리 (예: 20090315)" style="font-size:${fs}px" maxlength="10">
+      <input class="fld f1" id="lid" data-label="학번" inputmode="numeric" maxlength="10" placeholder="학번 (예: 10106)" style="font-size:${fs}px" value="${esc(LS.get("omok_lastid") || "")}">
+      <input class="fld f2" id="lname" data-label="이름" maxlength="20" placeholder="이름" style="font-size:${fs}px">
+      <input class="fld f3" id="lbirth" data-label="생일 8자리 (예: 20090315)" type="password" inputmode="numeric" placeholder="생일 8자리 (예: 20090315)" style="font-size:${fs}px" maxlength="10">
       <button class="go" type="submit" aria-label="우리반 입장"></button>
       <div class="lmsg" id="lmsg"></div></form></div>
     <a class="tlink" href="teacher.html">교사</a></div>`;

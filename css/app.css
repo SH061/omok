@@ -132,3 +132,13 @@ body.tbody{background:#eef1fb;min-height:100vh;overflow:hidden}
 .vert .addstu .btn{grid-column:1/-1;padding:10px;font-size:18px}
 .tbwrap{overflow-x:auto}
 .vert .tbwrap .tb{min-width:720px}
+/* 휴대폰·태블릿 입력창 (화면 위쪽 고정) */
+#kbd{position:fixed;inset:0;z-index:3000;background:#05071acc;display:flex;align-items:flex-start;justify-content:center;padding:10px 12px}
+.kbd-in{position:relative;width:100%;max-width:560px;border:4px solid transparent;border-radius:18px;padding:10px 12px 12px;
+  background:linear-gradient(180deg,#fffffff2,#eef3fbf0) padding-box,var(--metal) border-box;box-shadow:0 0 0 2px #243a66,0 10px 30px #000a;animation:pop .2s}
+.kbd-l{font:17px Jua;color:#243a66;margin-bottom:6px;padding-right:30px}
+.kbd-row{display:flex;gap:8px}
+.kbd-row input{flex:1;min-width:0;font:600 18px Pretendard;padding:10px 12px;border:2px solid #7d96c0;border-radius:12px;outline:none;background:#fff;-webkit-user-select:text;user-select:text}
+.kbd-row input:focus{border-color:#2f7bf0;box-shadow:0 0 0 3px #7fc8ff88}
+.kbd-row .btn{font-size:17px;padding:6px 14px}
+.kbd-x{position:absolute;right:8px;top:6px;border:0;background:none;font:20px Jua;color:#4a5173;cursor:pointer}
