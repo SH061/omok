@@ -31,6 +31,8 @@ const ERR = {
   pick_empty: "빈칸을 골라야 해요.", pick_cell: "칸을 골라야 해요.", no_card: "그 카드가 없어요.", muted: "선생님이 채팅을 막았어요.",
   player_cannot_chat: "게임 중인 선수는 관전 채팅을 쓸 수 없어요.", game_live: "진행 중인 게임이 있어요.", match_not_ready: "두 조가 모두 정해져야 시작할 수 있어요.",
   empty_group: "조원이 없는 조가 있어요.", match_live: "진행 중인 경기가 있어서 대진표를 바꿀 수 없어요.", too_short: "암호는 4글자 이상이어야 해요.",
+  own_trap: "내가 숨겨둔 함정이 있는 칸이에요. 다른 곳에 두세요.", trap_exists: "이미 함정이 있는 칸이에요.", trap_limit: "함정은 팀당 2개까지만 숨길 수 있어요.",
+  not_trap_card: "이 카드는 함정으로 숨길 수 없어요.", bad_mode: "알 수 없는 게임 방식이에요.",
   not_mission: "미션 시간이 끝났어요.", teacher_cannot_play: "교사는 매칭에 들어갈 수 없어요."
 };
 async function rpc(fn, args = {}) {
@@ -73,6 +75,18 @@ const CARD = {
 const CHANCE_KEYS = ["shield", "remove", "move", "wall", "slow", "spy", "steal", "double", "roulette", "whirl", "gamble"];
 const GOLD_KEYS = ["bomb", "timemachine", "sweep", "triple", "swap"];
 const ROUL = { boom2: "💥 상대 돌 2개 제거", clear: "🧹 상대 카드 초기화", extra: "➕ 돌 1개 더", miss: "⚪ 꽝!", back: "🌬 역풍 (내 돌 1개 사라짐)" };
+/* 판에 숨겨둘 수 있는 카드 (상대가 그 칸에 돌을 두면 발동) */
+const TRAP_KEYS = ["wall", "remove", "move", "slow", "steal", "whirl", "bomb"];
+const TRAP_TEXT = {
+  wall: "상대가 이 칸에 두면 그 돌은 무효! 이 칸이 바리케이드로 변해 3턴 동안 막혀요.",
+  remove: "상대가 이 칸에 두면 그 돌은 무효! 거기에 더해 상대 돌 1개가 무작위로 사라져요.",
+  move: "상대가 이 칸에 두면 돌이 미끄러져서 옆 빈칸으로 밀려나요.",
+  slow: "상대가 이 칸에 두면 그 팀의 다음 차례 시간이 확 줄어요.",
+  steal: "상대가 이 칸에 두면 그 팀 카드 1장을 무작위로 뺏어와요.",
+  whirl: "상대가 이 칸에 두면 그 주변 3×3 돌이 마구 섞여요.",
+  bomb: "지뢰! 상대가 이 칸에 두면 3×3이 모두 터져 사라지고, 그 돌도 무효예요."
+};
+const isTrapKey = k => TRAP_KEYS.includes(k);
 const TARGET = { remove: "opp", move: "opp", wall: "empty", whirl: "any", bomb: "any" };
 const isGold = k => GOLD_KEYS.includes(k);
 const cardImg = k => `assets/cards/${k}.webp`;
@@ -193,6 +207,7 @@ function boardHTML(o) {
     else if (v === "2") inner = `<div class="st w ${o.last?.has(i) ? "last" : ""}"></div>`;
     else if (v === "3") inner = `<div class="wall"><b>${Math.max(1, (o.walls?.[i] ?? 0) - (o.turnNo ?? 0))}</b></div>`;
     else if (o.bans?.has(i)) inner = `<span class="ban">✕</span>`;
+    if (o.traps?.has(i) && v === "0") { const tp = o.traps.get(i); inner += `<span class="trapmk ${tp.team === 1 ? "t1" : ""}" title="${esc(CARD[tp.k]?.[0] || "")} 함정">🪤<i>${CARD[tp.k] ? esc(CARD[tp.k][0].slice(0, 2)) : ""}</i></span>`; }
     if (o.tgt?.has(i)) inner += `<span class="tgt"></span>`;
     if (o.pick?.has(i)) inner += `<span class="pick"></span>`;
     h += `<div class="cell" data-i="${i}">${inner}</div>`;
@@ -295,7 +310,8 @@ function bracketList() {
 const TEAMCLS = ["a", "b"];
 const teamName = (G, t) => G.teams[t].grp ? grpName(G.teams[t].grp) : G.teams[t].name;
 const whoL = (G, t, p) => { const tn = teamName(G, t), n = nameOf(p); return tn === n ? n : tn + " " + n; };
-const modeLabel = G => ({ solo: "⚔️ 1:1 연습", random: "🎲 3:3 랜덤", group: "🛡️ 조별 연습", tournament: "🏆 토너먼트" }[G.mode] || "게임");
+const modeLabel = G => ({ solo: "⚔️ 1:1 연습", random: "🎲 3:3 랜덤", group: "🛡️ 조별 연습", tournament: "🏆 토너먼트" }[G.mode] || "게임") + (G.noitem ? " · 🚫노템" : "");
+const trapN = (G, t) => +(G.effects?.trapn?.[t] || 0);
 /* 선수별 이번 게임 퀴즈 기록 (이벤트에서 모음) */
 function quizLog(G, log) {
   for (const e of G.events || []) if (e.type === "quiz" && !log.has(e.seq)) log.set(e.seq, e);
@@ -307,13 +323,14 @@ function qMark(r) { return r === "correct" ? "✅" : r === "wrong" ? "❌" : r =
 function teamBox(G, t, { mini = false, qres = {}, handN } = {}) {
   const T = G.teams[t], a = t === 0, cls = TEAMCLS[t], col = a ? "#ff5a5f" : "#3d8bff";
   const n = handN ?? (G.hand_count?.[t] ?? 0);
-  const backs = [0, 1].map(k => back("sm " + (k < n ? "" : "empty"))).join("") + (n > 2 ? `<b style="margin-left:2px">+${n - 2}</b>` : "");
+  const tn = trapN(G, t);
+  const backs = G.noitem ? `<span class="noitem-tag">🚫 노템</span>` : [0, 1].map(k => back("sm " + (k < n ? "" : "empty"))).join("") + (n > 2 ? `<b style="margin-left:2px">+${n - 2}</b>` : "") + (tn ? `<b class="trapcnt" title="숨겨진 함정">🪤${tn}</b>` : "");
   const now = G.cur_team === t ? G.cur_player : null;
   if (mini) return `<div class="tmini ${cls}"><div class="tn"><span class="sic ${a ? "k" : "w"}"></span>${esc(teamName(G, t))}<span class="backs">${backs}</span></div>
     <div class="faces">${T.players.map((p, i) => `<div class="face ${now === p ? "now" : ""}"><span class="o">${i + 1}</span>${qres[p] ? `<span class="r">${qMark(qres[p])}</span>` : ""}${av(p, 24, col)}<span>${esc(nameOf(p))}</span></div>`).join("")}</div></div>`;
   return `<div class="team ${cls}"><div class="tn"><span class="sic ${a ? "k" : "w"}"></span>${esc(teamName(G, t))}<small>${a ? "흑 · 선공" : "백"}</small></div>
     <div class="members">${T.players.map((p, i) => `<div class="mem ${now === p ? "now" : ""}"><span class="ord">${i + 1}</span>${av(p, 26, col)}<div>${esc(nameOf(p))}${qres[p] ? `<span class="qs">${qMark(qres[p])}</span>` : ""}</div></div>`).join("")}</div>
-    <div class="backs">카드 ${n}/2 ${backs}</div></div>`;
+    <div class="backs">${G.noitem ? "" : `카드 ${n}/2 `}${backs}</div></div>`;
 }
 function timerHTML(G) {
   if (!G.deadline || G.status !== "live") return `<div class="timer"><span>-</span></div>`;
@@ -341,6 +358,8 @@ function specQ(G, qres) {
 function evText(G, e) {
   const who = e.player ? whoL(G, e.team, e.player) : "";
   switch (e.type) {
+    case "trap_set": return `🪤 ${who} 함정을 숨겼어요! (어디에 뭘 숨겼는지는 비밀)`;
+    case "trap_hit": return e.blocked ? `🛡 ${teamName(G, e.victim)} 방어막이 ${teamName(G, e.team)}의 ${CARD[e.k][0]} 함정을 막았다!` : `💥 ${teamName(G, e.victim)} ${nameOf(e.player)} → ${teamName(G, e.team)}의 ${CARD[e.k][0]} 함정 발동!`;
     case "card_get": return e.gold ? `✨ ${who} 황금카드 획득!` : `🃏 ${who} 카드 획득!`;
     case "card_use": return e.blocked ? `🛡 ${teamName(G, 1 - e.team)} 방어막 발동! ${CARD[e.k][0]} 막았다!` : `⚡ ${who} → ${CARD[e.k][0]}${e.outcome && ROUL[e.outcome] ? " · " + ROUL[e.outcome] : e.outcome === "head" ? " · 앞면! 돌 3개" : e.outcome === "tail" ? " · 뒷면… 이번 턴 끝" : ""}`;
     case "quiz": return `${qMark(e.result)} ${who} ${e.result === "correct" ? "정답" : e.result === "wrong" ? "오답" : "시간 초과"}`;

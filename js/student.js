@@ -1,6 +1,7 @@
 /* ═══ 1-1반 협동오목 — 학생 화면 ═══ */
 const stage = $("#stage");
 const S = {
+  noitem: (() => { try { return localStorage.getItem("omok_noitem") === "1"; } catch (e) { return false; } })(),
   me: null, token: null, dev: "tablet", W: 1180, H: 820, k: 1, rot: false, tx: 0, ty: 0,
   screen: "login", G: null, gameId: null, view: null, qlog: new Map(), lastSeq: 0, feed: [],
   menu: null, overlay: null, pick: null, answered: false, winUntil: 0, endG: null,
@@ -299,9 +300,10 @@ function renderMenu() {
   const ol = online(), nOn = DATA.roster.filter(s => ol[s.id]).length;
   const item = (k, ic, l, sub, body) => `<div class="dd-item ${S.menu === k ? "open" : ""}"><div class="dd-row" data-menu="${k}">${ic} ${l}<span class="dd-sub">${sub}</span><span class="dd-arrow">${S.menu === k ? "▾" : "▸"}</span></div>${S.menu === k ? body : ""}</div>`;
   const game = `<div class="dd-body">${!on ? `<div class="help" style="text-align:center">⛔ 지금은 선생님이 게임을 꺼두었어요</div>` : busy ? `<div class="help" style="text-align:center">🎮 다른 게임이 진행 중이에요</div>` : inQ ? `<div class="help" style="text-align:center">🎲 매칭 대기 중이에요</div>` : ""}
-    <button class="btn sm" data-q="solo" ${dis}>⚔️ 1:1 빠른 매칭<small>2명</small></button>
-    <button class="btn sm red" data-q="random" ${dis}>🎲 3:3 랜덤 매칭<small>6명</small></button>
-    <button class="btn sm green" data-q="group" ${dis || (S.me.grp ? "" : "disabled")}>🛡️ 조별 연습<small>${S.me.grp ? esc(grpName(S.me.grp)) + " vs 다른 조" : "조 없음"}</small></button>
+    <div class="ni-row"><span class="switch ${S.noitem ? "" : "off"}" data-act="toggleNi"><i></i>🚫 노템전</span><small>${S.noitem ? "카드·퀴즈 없이 순수 오목" : "끄면 퀴즈·카드·함정 규칙"}</small></div>
+    <button class="btn sm" data-q="solo${S.noitem ? "_ni" : ""}" ${dis}>⚔️ 1:1 빠른 매칭<small>2명</small></button>
+    <button class="btn sm red" data-q="random${S.noitem ? "_ni" : ""}" ${dis}>🎲 3:3 랜덤 매칭<small>6명</small></button>
+    <button class="btn sm green" data-q="group${S.noitem ? "_ni" : ""}" ${dis || (S.me.grp ? "" : "disabled")}>🛡️ 조별 연습<small>${S.me.grp ? esc(grpName(S.me.grp)) + " vs 다른 조" : "조 없음"}</small></button>
     <button class="btn sm gold" data-ov="bracket">🏆 토너먼트 대진표</button>
     <button class="btn sm white" data-ov="dex">🃏 카드 도감</button>
     <button class="btn xs gray" data-act="logout" style="align-self:flex-end">로그아웃</button></div>`;
@@ -321,9 +323,10 @@ function renderMatchWait() {
   const q = DATA.queue.find(x => x.sid === S.me.id);
   if (!q || curGameId()) { w._h = ""; w.innerHTML = ""; return; }
   const same = DATA.queue.filter(x => x.mode === q.mode);
-  const need = q.mode === "solo" ? 2 : q.mode === "random" ? 6 : 0;
+  const base = q.mode.replace("_ni", ""), ni = base !== q.mode;
+  const need = base === "solo" ? 2 : base === "random" ? 6 : 0;
   let seats = "", line = "";
-  if (q.mode === "group") {
+  if (base === "group") {
     const byG = {}; same.forEach(x => (byG[x.grp] = byG[x.grp] || []).push(x.sid));
     const mineG = byG[q.grp] || [];
     const others = Object.entries(byG).filter(([g, a]) => +g !== q.grp && a.length >= 2);
@@ -333,8 +336,8 @@ function renderMatchWait() {
     seats = Array.from({ length: need }, (_, i) => same[i] ? `<div class="seat full">${av(same[i].sid, 36)}<span>${esc(nameOf(same[i].sid))}</span></div>` : `<div class="seat">?</div>`).join("");
     line = `${Math.min(same.length, need)} / ${need}명 대기 중…`;
   }
-  const title = { solo: "⚔️ 1:1 빠른 매칭", random: "🎲 3:3 랜덤 매칭", group: "🛡️ 조별 연습" }[q.mode];
-  const sub = { solo: "2명이 모이면 바로 시작해요", random: "6명이 모이면 팀을 무작위로 나눠요", group: "조원 2명 이상 + 상대 조가 모이면 시작해요" }[q.mode];
+  const title = { solo: "⚔️ 1:1 빠른 매칭", random: "🎲 3:3 랜덤 매칭", group: "🛡️ 조별 연습" }[base] + (ni ? " · 🚫노템전" : "");
+  const sub = { solo: "2명이 모이면 바로 시작해요", random: "6명이 모이면 팀을 무작위로 나눠요", group: "조원 2명 이상 + 상대 조가 모이면 시작해요" }[base];
   const mhtml = `<div class="dim"><div class="match-card panel"><div style="font:26px Jua">${title}</div><div style="font:15px Jua;color:var(--ink2)">${sub}</div><div class="spinner"></div><div class="seats">${seats}</div><div style="font:17px Jua;margin-bottom:10px">${line}</div><button class="btn gray" data-act="leaveq">매칭 취소</button></div></div>`;
   if (w._h !== mhtml) { w._h = mhtml; w.innerHTML = mhtml; }
 }
@@ -408,6 +411,12 @@ function handleEvent(e, prevHand) {
       const nw = S.view.hand.find(c => !prevHand.includes(c.u)) || S.view.hand[S.view.hand.length - 1];
       if (nw) fx(`<div class="burst ${e.gold ? "gold" : ""}"></div><div class="speed"></div><div class="big outline" ${e.gold ? 'style="color:var(--gold1)"' : ""}>${e.gold ? "✨ 황금카드 획득! ✨" : "카드 획득!"}</div><div class="flipin">${card(nw.k, { w: S.dev === "phone" ? 120 : 200, cls: "shine" })}</div><div class="who-line">${esc(CARD[nw.k][0])} — ${esc(CARD[nw.k][1])}</div><div class="desc">우리 팀 카드함에 들어갔어요 (${S.view.hand.length} / 2)</div>`, 2600);
     } else if (e.gold) fx(`<div class="burst gold"></div><div class="big outline" style="color:var(--gold1)">✨ 황금카드 획득! ✨</div><div class="flipin">${back("wob")}</div><div class="who-line">${esc(teamName(G, e.team))} ${esc(nameOf(e.player))} 미션 성공!</div>`, 2200);
+  } else if (e.type === "trap_set") {
+    toast(mt === e.team ? "🪤 우리 팀이 함정을 숨겼어요!" : "🪤 상대 팀이 어딘가에 함정을 숨겼어요… 조심!", mt === e.team ? "ok" : "err");
+  } else if (e.type === "trap_hit") {
+    const w = S.dev === "phone" ? 130 : 210;
+    if (e.blocked) fx(`<div class="burst"></div><div class="big outline">🛡 함정 방어!</div><div style="display:flex;align-items:center;gap:14px;position:relative">${card(e.k, { w: w * .8 }).replace('class="cimg', 'style="filter:grayscale(.8) brightness(.7);transform:rotate(-14deg)" class="cimg')}<span style="font:60px 'Black Han Sans';color:#fff">✕</span><div class="zoomhit">${card("shield", { w, cls: "shine" })}</div></div><div class="who-line">${esc(teamName(G, e.victim))}가 방어막으로 함정을 막았어요! 🛡</div>`, 2600);
+    else fx(`<div class="burst red"></div><div class="speed"></div><div class="big outline">🪤 함정 발동!</div><div class="zoomhit">${card(e.k, { w, cls: "shine" })}</div><div class="who-line">${esc(teamName(G, e.victim))} <b style="color:var(--gold1)">${esc(nameOf(e.player))}</b>이(가) ${esc(teamName(G, e.team))}의 <b style="color:var(--gold1)">${esc(CARD[e.k][0])}</b> 함정을 밟았어요!</div><div class="desc">${esc(TRAP_TEXT[e.k])}</div>`, 3200, true);
   } else if (e.type === "mission_result" && !e.ok) {
     if (mt === e.team) toast(e.auto ? "⌛ 미션 시간이 끝났어요" : "❌ 미션 실패 — 이번엔 패스!", "err");
   } else if (e.type === "quiz" && e.player === S.me.id) {
@@ -476,7 +485,8 @@ function boardScreen(G) {
   let tgt = null, pick = null, bset = null, hint = "";
   if (action && S.pick) {
     const opp = String(2 - G.cur_team), b = G.board; tgt = new Set();
-    if (S.pick.step === 2) { const r = Math.floor(S.pick.i / 15), c = S.pick.i % 15; pick = new Set([S.pick.i]); for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { const rr = r + dr, cc = c + dc; if ((dr || dc) && rr >= 0 && rr < 15 && cc >= 0 && cc < 15 && b[rr * 15 + cc] === "0") tgt.add(rr * 15 + cc); } hint = "옮길 <b style='color:var(--gold1)'>바로 옆 빈칸</b>을 누르세요"; }
+    if (S.pick.trap) { tgt = null; hint = "🪤 " + CARD[S.pick.k][0] + " 함정을 <b style='color:var(--gold1)'>숨길 빈칸</b>을 누르세요 (상대는 볼 수 없어요)"; }
+    else if (S.pick.step === 2) { const r = Math.floor(S.pick.i / 15), c = S.pick.i % 15; pick = new Set([S.pick.i]); for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { const rr = r + dr, cc = c + dc; if ((dr || dc) && rr >= 0 && rr < 15 && cc >= 0 && cc < 15 && b[rr * 15 + cc] === "0") tgt.add(rr * 15 + cc); } hint = "옮길 <b style='color:var(--gold1)'>바로 옆 빈칸</b>을 누르세요"; }
     else if (TARGET[S.pick.k] === "opp") { for (let i = 0; i < 225; i++) if (b[i] === opp) tgt.add(i); hint = `${CARD[S.pick.k][0]}: <b style='color:var(--gold1)'>상대 돌</b>을 누르세요`; }
     else if (TARGET[S.pick.k] === "empty") { hint = `${CARD[S.pick.k][0]}: 막을 <b style='color:var(--gold1)'>빈칸</b>을 누르세요`; tgt = null; }
     else hint = `${CARD[S.pick.k][0]}: <b style='color:var(--gold1)'>가운데 칸</b>을 누르세요 (3×3)`;
@@ -485,7 +495,8 @@ function boardScreen(G) {
     hint = G.turn?.stones > 1 ? `돌 ${G.turn.stones}개 중 ${(G.turn.placed || 0) + 1}번째를 놓으세요` : "돌을 놓을 자리를 누르세요";
   } else if (myTurn && G.phase === "quiz") hint = "OX퀴즈!";
   else if (player && G.status === "live") hint = G.cur_team === mt ? `우리 팀 ${esc(nameOf(G.cur_player))} 차례예요` : `상대 팀 차례예요`;
-  const bo = boardHTML({ board: G.board, last, walls: G.walls, turnNo: G.turn_no, bans: bset, tgt, pick, click: action });
+  const traps = new Map((S.view?.traps || []).map(t => [t.i, { k: t.k, team: mt }]));   // 내 팀이 숨긴 함정만 보임
+  const bo = boardHTML({ board: G.board, last, walls: G.walls, turnNo: G.turn_no, bans: bset, tgt, pick, traps, click: action });
   const top = `<div class="gtop"><span class="mode">${modeLabel(G)}</span>${player ? "" : `<span class="spec-tag">👀 관전 중</span>`}<div class="turn">${turnText(G, S.me.id)}</div>${timerHTML(G)}</div>`;
   const sq = G.phase === "quiz" || (G.quiz && G.quiz.result) ? specQ(G, qres) : "";
   let right = "";
@@ -507,6 +518,7 @@ function boardScreen(G) {
     <div class="col">${right}</div>${feed}</div>${over}`;
 }
 function handHTML(G, mt, myTurn) {
+  if (G.noitem) return `<div class="handbox"><div class="lbl">🚫 노템전</div><div class="note" style="font-size:13px">카드도 퀴즈도 없는<br>순수 오목 대결!<br>5목을 먼저 만들면 승리</div></div>`;
   const hand = S.view?.hand || [], PH = S.dev === "phone", cw = PH ? 88 : 140;
   const canUse = myTurn && G.phase === "action" && !G.turn?.card && !(G.turn?.placed > 0);
   const cards = hand.map(c => card(c.k, { w: cw, cls: (S.pick?.uid === c.u ? "sel" : "shine") + (canUse ? "" : " cant"), attrs: `data-card="${c.u}"` })).join("") || `${back("empty")}`;
@@ -524,13 +536,14 @@ function chooseHTML(G) {
   const canUse = !G.turn?.card && !(G.turn?.placed > 0);
   const w = S.vert ? 94 : S.dev === "phone" ? 92 : 150;
   const items = hand.map(c => `<div class="citem">${card(c.k, { w, cls: "shine", attrs: `data-info="${c.k}"` })}<div class="cname">${esc(CARD[c.k][0])}</div>
-    <div class="cbtns">${canUse && c.k !== "shield" ? `<button class="btn xs red" data-use="${c.u}">⚡ 사용</button>` : ""}<button class="btn xs gray" data-discard="${c.u}">🗑 버리기</button></div>
+    <div class="cbtns">${canUse && c.k !== "shield" ? `<button class="btn xs red" data-use="${c.u}">⚡ 사용</button>` : ""}${canUse && isTrapKey(c.k) ? `<button class="btn xs purple" data-trap="${c.u}">🪤 숨기기</button>` : ""}<button class="btn xs gray" data-discard="${c.u}">🗑 버리기</button></div>
     ${c.k === "shield" ? `<div class="cnote">자동으로 막아줘요</div>` : ""}</div>`).join("");
   return `<div class="dim choose"><div class="panel choose-box"><div class="ct">🃏 카드가 ${n}장이에요!</div>
     <div class="cd">카드함은 2장까지예요. <b>하나를 쓰거나 버려야</b> 돌을 놓을 수 있어요.${canUse ? "" : " (이번 차례엔 이미 카드를 써서 버리기만 할 수 있어요)"}</div>
     <div class="crow">${items}</div><div class="chint">카드 그림을 누르면 설명을 볼 수 있어요</div></div></div>`;
 }
 function handRowHTML(G, mt, myTurn) {
+  if (G.noitem) return `<div class="handrow"><div class="acts" style="width:100%;text-align:center"><div class="hnote">🚫 노템전 — 카드·퀴즈 없이 순수 오목! 5목을 먼저 만들면 승리</div></div></div>`;
   const hand = S.view?.hand || [];
   const canUse = myTurn && G.phase === "action" && !G.turn?.card && !(G.turn?.placed > 0);
   const cards = hand.map(c => card(c.k, { w: 88, cls: (S.pick?.uid === c.u ? "sel" : "shine") + (canUse ? "" : " cant"), attrs: `data-card="${c.u}"` })).join("") || back("empty");
@@ -584,8 +597,8 @@ function overlayHTML() {
 }
 function infoHTML(k, { use = false, uid } = {}) {
   const w = S.dev === "phone" ? 90 : 150, shield = k === "shield";
-  return `<div class="confirm" data-act="closeinfo"><div class="panel" data-act="noop">${card(k, { w })}<div class="t">${esc(CARD[k][0])}</div><div class="d">${esc(CARD[k][1])}</div>
-    <div class="row">${use && !shield ? `<button class="btn red sm" data-use="${uid}">⚡ 사용하기</button>` : ""}${use ? `<button class="btn white sm" data-discard="${uid}">🗑 버리기</button>` : ""}<button class="btn gray sm" data-act="closeinfo">닫기</button></div>
+  return `<div class="confirm" data-act="closeinfo"><div class="panel" data-act="noop">${card(k, { w })}<div class="t">${esc(CARD[k][0])}</div><div class="d">${esc(CARD[k][1])}</div>${isTrapKey(k) ? `<div class="d trapd">🪤 <b>함정으로 숨기면</b> — ${esc(TRAP_TEXT[k])}</div>` : ""}
+    <div class="row">${use && !shield ? `<button class="btn red sm" data-use="${uid}">⚡ 바로 사용</button>` : ""}${use && isTrapKey(k) ? `<button class="btn purple sm" data-trap="${uid}">🪤 함정으로 숨기기</button>` : ""}${use ? `<button class="btn white sm" data-discard="${uid}">🗑 버리기</button>` : ""}<button class="btn gray sm" data-act="closeinfo">닫기</button></div>
     ${use && shield ? `<div class="help">방어막은 카드함에 두기만 하면 자동으로 막아줘요</div>` : ""}</div></div>`;
 }
 
@@ -614,7 +627,7 @@ stage.addEventListener("submit", e => {
 stage.addEventListener("click", async e => {
   const t = e.target;
   if (S.screen === "plaza" && t.id === "roombg") { S.menu = null; renderMenu(); renderPlazaHud(); onPlazaTap(e); return; }
-  const el = t.closest("[data-act],[data-menu],[data-q],[data-ov],[data-card],[data-use],[data-discard],[data-ans],[data-info],.cell,#menubtn");
+  const el = t.closest("[data-act],[data-menu],[data-q],[data-ov],[data-card],[data-use],[data-trap],[data-discard],[data-ans],[data-info],.cell,#menubtn");
   if (!el) return;
   if (el.id === "menubtn") { S.menu = S.menu ? null : "game"; S.menuFresh = !!S.menu; renderPlazaHud(); return; }
   if (el.dataset.menu) { S.menu = S.menu === el.dataset.menu ? null : el.dataset.menu; renderPlazaHud(); return; }
@@ -624,6 +637,7 @@ stage.addEventListener("click", async e => {
   if (el.dataset.ans) { answer(el.dataset.ans, el); return; }
   if (el.dataset.card) { onCardTap(el.dataset.card); return; }
   if (el.dataset.use) { $("#infolayer").innerHTML = ""; useCard(el.dataset.use); return; }
+  if (el.dataset.trap) { $("#infolayer").innerHTML = ""; const c = (S.view?.hand || []).find(x => x.u === el.dataset.trap); if (c) { S.pick = { uid: c.u, k: c.k, step: 1, trap: true }; render(); } return; }
   if (el.dataset.discard) { $("#infolayer").innerHTML = ""; try { await rpc("omok_discard", { p_token: S.token, p_game: S.gameId, p_uid: el.dataset.discard }); } catch (er) { toast(er.message, "err"); } return; }
   if (el.classList.contains("cell")) { onCell(+el.dataset.i); return; }
   const a = el.dataset.act;
@@ -633,6 +647,7 @@ stage.addEventListener("click", async e => {
   else if (a === "closeinfo") $("#infolayer").innerHTML = "";
   else if (a === "noop") return;
   else if (a === "cancelpick") { S.pick = null; render(); }
+  else if (a === "toggleNi") { S.noitem = !S.noitem; LS.set("omok_noitem", S.noitem ? "1" : "0"); renderMenu(); }
   else if (a === "towin") { S.winUntil = 0; }
   else if (a === "spectate") { S.overlay = null; render(); }
   else if (a === "logout") { LS.del("omok_token"); location.reload(); }
@@ -649,7 +664,7 @@ function onCardTap(uid) {
   const canUse = myTurn && !G.turn?.card && !(G.turn?.placed > 0);
   if (S.pick?.uid === uid) { S.pick = null; render(); return; }
   $("#infolayer").innerHTML = infoHTML(c.k, { use: myTurn && (canUse || (S.view.hand.length > 2)), uid });
-  if (!canUse) { const b = $(`[data-use="${uid}"]`); if (b) b.remove(); }
+  if (!canUse) { $(`[data-use="${uid}"]`)?.remove(); $(`[data-trap="${uid}"]`)?.remove(); }
 }
 async function useCard(uid) {
   const c = (S.view?.hand || []).find(x => x.u === uid); if (!c) return;
@@ -666,10 +681,22 @@ async function fireCard(uid, params) {
   } catch (e) { toast(e.message, "err"); }
   render();
 }
+async function fireTrap(uid, i) {
+  S.pick = null;
+  try { await rpc("omok_set_trap", { p_token: S.token, p_game: S.gameId, p_uid: uid, p_cell: i }); toast("🪤 함정을 숨겼어요! 이제 돌을 놓으세요", "ok"); }
+  catch (e) { toast(e.message, "err"); }
+  render();
+}
 async function onCell(i) {
   const G = S.G; if (!G || G.cur_player !== S.me.id || G.phase !== "action") return;
+  const myTraps = (S.view?.traps || []).map(t => t.i);
   if (S.pick) {
     const p = S.pick, b = G.board, opp = String(2 - G.cur_team), T = TARGET[p.k];
+    if (p.trap) {
+      if (b[i] !== "0") return toast("빈칸을 고르세요", "err");
+      if (myTraps.includes(i)) return toast("이미 내 함정이 있는 칸이에요", "err");
+      return fireTrap(p.uid, i);
+    }
     if (p.k === "move") {
       if (p.step === 1) { if (b[i] !== opp) return toast("상대 돌을 고르세요", "err"); S.pick = { ...p, step: 2, i }; render(); return; }
       return fireCard(p.uid, { i: p.i, j: i });
@@ -679,6 +706,7 @@ async function onCell(i) {
     return fireCard(p.uid, { i });
   }
   if (G.board[i] !== "0") return;
+  if (myTraps.includes(i)) return toast("내가 숨겨둔 함정 칸이에요. 다른 곳에 두세요", "err");
   const cell = $(`.cell[data-i="${i}"]`);
   if (cell && !cell.innerHTML) cell.innerHTML = `<div class="st ${G.cur_team ? "w" : "k"} fresh" style="opacity:.6"></div>`;
   try { await rpc("omok_place", { p_token: S.token, p_game: S.gameId, p_i: i }); }

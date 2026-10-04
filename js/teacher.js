@@ -145,7 +145,7 @@ function renderLive() {
   if (G.status === "live" && G.phase === "mission" && G.mission) appr = `<div class="approve"><h3>✨ 황금카드 미션 확인</h3><div style="font:600 14px Pretendard;margin:4px 0 8px">${esc(teamName(G, G.cur_team))} <b>${esc(nameOf(G.cur_player))}</b> — "${esc(G.mission.text)}"</div><div style="display:flex;gap:8px;align-items:center"><button class="btn sm green" data-act="judgeOk">⭕ 승인</button><button class="btn sm red" data-act="judgeNo">❌ 거절(패스)</button><span id="jtimer" style="font:24px 'Black Han Sans';color:var(--red);margin-left:auto"></span></div></div>`;
   const hands = (d.hands || [[], []]).map((h, t) => `<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;font:14px Jua;flex-wrap:wrap">${t ? "⚪" : "⚫"} ${esc(teamName(G, t))} ${h.length ? h.map(c => `<span class="mini ${c.g ? "gold" : ""}"><img src="${cardImg(c.k)}">${esc(CARD[c.k][0])}</span>`).join("") : `<span class="help" style="margin:0">없음</span>`}</div>`).join("");
   const q = G.quiz ? `<div class="t-card"><h3>❓ 현재 문제</h3><div style="font:600 14px Pretendard">[${esc(G.quiz.subject)}] ${esc(G.quiz.q)}</div><div style="margin-top:4px;font:16px Jua">정답 <span class="${d.ans === "O" ? "ok" : "x"}">${esc(d.ans || "?")}</span>${d.expl ? ` · ${esc(d.expl)}` : ""} ${G.quiz.result ? `· ${qMark(G.quiz.result)}` : ""}</div></div>` : "";
-  right.innerHTML = appr + `<div class="t-card"><h3>🃏 양 팀 카드함 (교사만)</h3>${hands}</div>` + q +
+  right.innerHTML = appr + `<div class="t-card"><h3>🃏 양 팀 카드함 (교사만)</h3>${G.noitem ? `<div class="help" style="margin:0">🚫 노템전 — 카드·퀴즈 없음</div>` : hands}${(d.traps || []).length ? `<h3 style="margin-top:8px">🪤 숨겨진 함정</h3>` + d.traps.map(t => `<span class="mini ${t.team ? "" : "gold"}" style="margin:2px">${t.team ? "⚪" : "⚫"} ${esc(CARD[t.k][0])} · ${Math.floor(t.i / 15) + 1}행 ${t.i % 15 + 1}열</span>`).join("") : ""}</div>` + q +
     `<div class="t-card"><h3>📜 기록</h3><div style="font:13px Jua;line-height:1.7;max-height:150px;overflow:auto">${T.feed.slice().reverse().map(t => `<div>${esc(t)}</div>`).join("") || "<div class='help'>아직 없어요</div>"}</div></div>` +
     chatCard("💬 관전 채팅", T.chat, true);
   const mm = $("#tmsgs"); if (mm) mm.scrollTop = 1e6;
@@ -159,13 +159,13 @@ function liveGame(G) {
   const handCol = [0, 1].map(t => `<div class="handbox" style="width:100%"><div class="lbl">${t ? "⚪" : "⚫"} ${esc(teamName(G, t))} 카드</div><div class="cards" style="flex-direction:row;gap:8px">${(d.hands?.[t] || []).map(c => card(c.k, { w: 96 })).join("") || back("empty")}</div></div>`).join("");
   return `<div class="g"><div class="gtop"><span class="mode">${esc(modeLabel(G))}</span><div class="turn">${turnText(G, "")}</div>${timerHTML(G)}</div>
     <div class="col">${teamBox(G, 0, { qres })}${teamBox(G, 1, { qres })}</div>
-    <div class="boardbox">${G.quiz ? specQ(G, qres) : ""}${boardHTML({ board: G.board, last, walls: G.walls, turnNo: G.turn_no })}</div>
+    <div class="boardbox">${G.quiz ? specQ(G, qres) : ""}${boardHTML({ board: G.board, last, walls: G.walls, turnNo: G.turn_no, traps: new Map((d.traps || []).map(t => [t.i, { k: t.k, team: t.team }])) })}</div>
     <div class="col">${handCol}</div></div>`;
 }
 function queueCard() {
   const by = {}; DATA.queue.forEach(q => (by[q.mode] = by[q.mode] || []).push(q));
-  const L = { solo: "⚔️ 1:1", random: "🎲 3:3 랜덤", group: "🛡️ 조별" };
-  return `<div class="t-card"><h3>🎲 매칭 대기열 <span class="chip">${DATA.queue.length}명</span></h3>${Object.keys(by).length ? Object.entries(by).map(([k, a]) => `<div style="font:14px Jua;margin:4px 0">${L[k]}: ${a.map(q => esc(nameOf(q.sid)) + (k === "group" ? `(${esc(grpName(q.grp))})` : "")).join(", ")}</div>`).join("") : `<div class="help">대기 중인 학생이 없어요</div>`}
+  const L = { solo: "⚔️ 1:1", random: "🎲 3:3 랜덤", group: "🛡️ 조별", solo_ni: "⚔️ 1:1 🚫노템", random_ni: "🎲 3:3 🚫노템", group_ni: "🛡️ 조별 🚫노템" };
+  return `<div class="t-card"><h3>🎲 매칭 대기열 <span class="chip">${DATA.queue.length}명</span></h3>${Object.keys(by).length ? Object.entries(by).map(([k, a]) => `<div style="font:14px Jua;margin:4px 0">${L[k]}: ${a.map(q => esc(nameOf(q.sid)) + (k.startsWith("group") ? `(${esc(grpName(q.grp))})` : "")).join(", ")}</div>`).join("") : `<div class="help">대기 중인 학생이 없어요</div>`}
     <div class="row"><button class="btn xs" data-act="force">⏩ 지금 시작 (모인 인원으로)</button><button class="btn xs gray" data-act="qclear">대기열 비우기</button></div></div>`;
 }
 const msgsHTML = list => list.filter(m => !m.hidden).slice(-40).map(m => m.sid === "teacher" ? `<div class="msg t"><b>선생님</b>${esc(m.text)}</div>` : `<div class="msg"><b>${esc(m.name)}</b>${esc(m.text)}</div>`).join("");
@@ -333,7 +333,7 @@ function pageBracket(m) {
    <div class="t-card" style="padding:0;height:${V ? "auto" : "360px"};overflow:hidden">${V ? bracketList() : `<div class="pc" style="height:100%">${bracketGame("pc")}</div>`}</div>
    <div class="g2"><div class="t-card"><h3>✏️ 8강 대진 짜기</h3><table class="tb" id="btb"><tr><th>경기</th><th>A</th><th>B</th></tr>${R1.map(x => `<tr><td>8강 ${x.slot}</td><td><select data-b="${x.slot}a">${opt(x.grp_a)}</select></td><td><select data-b="${x.slot}b">${opt(x.grp_b)}</select></td></tr>`).join("")}</table>
      <div class="help">조를 고른 뒤 [💾 대진 저장]을 누르면 4강·결승 칸이 새로 만들어져요(기존 결과는 지워져요). 한쪽이 비면 부전승으로 바로 올라가요.</div></div>
-    <div class="t-card"><h3>▶ 경기 진행</h3>${DATA.matches.length ? `<table class="tb"><tr><th>경기</th><th>A</th><th>B</th><th>상태</th></tr>${DATA.matches.map(x => `<tr><td>${rn(x)}</td><td>${x.grp_a ? esc(grpName(x.grp_a)) : "?"}</td><td>${x.grp_b ? esc(grpName(x.grp_b)) : "?"}</td><td>${stat(x)}</td></tr>`).join("")}</table>` : `<div class="empty-note">아직 대진이 없어요</div>`}
+    <div class="t-card"><h3>▶ 경기 진행 <label class="chip" style="margin-left:auto;cursor:pointer"><input type="checkbox" id="bk_noitem" style="width:auto;margin-right:4px"> 🚫 노템전으로 시작</label></h3>${DATA.matches.length ? `<table class="tb"><tr><th>경기</th><th>A</th><th>B</th><th>상태</th></tr>${DATA.matches.map(x => `<tr><td>${rn(x)}</td><td>${x.grp_a ? esc(grpName(x.grp_a)) : "?"}</td><td>${x.grp_b ? esc(grpName(x.grp_b)) : "?"}</td><td>${stat(x)}</td></tr>`).join("")}</table>` : `<div class="empty-note">아직 대진이 없어요</div>`}
      <div class="help">▶ 시작을 누르면 모든 학생 화면에 "10초 뒤 토너먼트가 시작됩니다"가 떠요. 경기가 끝나면 이긴 조가 자동으로 다음 칸에 올라가요.</div></div></div>`;
 }
 function bFill(list) { list = list.slice(0, 8); [1, 2, 3, 4].forEach((s, i) => { $(`[data-b="${s}a"]`).value = list[i * 2] ?? ""; $(`[data-b="${s}b"]`).value = list[i * 2 + 1] ?? ""; }); toast("아래 [💾 대진 저장]을 눌러야 적용돼요"); }
@@ -353,7 +353,7 @@ ACTIONS.bSave = async () => {
   rows.push({ round: 2, slot: 1 }, { round: 2, slot: 2 }, { round: 3, slot: 1 });
   await rpc("omok_t_matches_save", { p_token: T.token, p_rows: rows }); await loadMatches(); toast("대진을 저장했어요", "ok"); render();
 };
-ACTIONS.mstart = async a => { if (!confirm("이 경기를 시작할까요? 모든 학생 화면이 경기로 바뀌어요.")) return; await rpc("omok_t_match_start", { p_token: T.token, p_match: +a.dataset.id }); toast("경기를 시작했어요! [🎮 실시간 관전]에서 보세요", "ok"); T.tab = "live"; render(); };
+ACTIONS.mstart = async a => { const ni = !!$("#bk_noitem")?.checked; if (!confirm(`이 경기를 ${ni ? "🚫 노템전(카드·퀴즈 없음)으로 " : ""}시작할까요? 모든 학생 화면이 경기로 바뀌어요.`)) return; await rpc("omok_t_match_start", { p_token: T.token, p_match: +a.dataset.id, p_noitem: ni }); toast("경기를 시작했어요! [🎮 실시간 관전]에서 보세요", "ok"); T.tab = "live"; render(); };
 
 /* ═══ ❓ OX문제 ═══ */
 async function pageQuiz(m) {

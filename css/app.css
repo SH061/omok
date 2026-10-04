@@ -242,3 +242,18 @@ body.tbody{background:#eef1fb;min-height:100vh;overflow:hidden}
 .vert .choose-box{padding:14px 10px 10px}
 .choose-box .cimg.gold{margin-bottom:12px}.phone .choose-box .cimg.gold{margin-bottom:9px}
 .phone .choose-box .cbtns{flex-direction:column;align-items:stretch;width:100%}.phone .choose-box .cbtns .btn{width:100%}
+/* 함정(숨겨둔 카드) · 노템전 */
+.trapmk{position:absolute;inset:8%;display:flex;align-items:center;justify-content:center;font-size:clamp(9px,2.3vw,17px);border-radius:50%;background:radial-gradient(circle,#ffe27acc,#ff9f1a99 60%,transparent 72%);box-shadow:0 0 0 2px #ffffff99;animation:pulse 1.6s infinite;pointer-events:none}
+.trapmk i{position:absolute;bottom:-3px;right:-3px;font:700 7px Pretendard;font-style:normal;background:#1d2340;color:#ffe27a;border-radius:4px;padding:0 2px;line-height:1.3}
+.trapmk.t1{background:radial-gradient(circle,#bcd8ffcc,#3d8bff99 60%,transparent 72%)}
+.trapcnt{margin-left:4px;font:13px Jua;background:#1d2340;color:#ffe27a;border-radius:999px;padding:0 6px;border:1.5px solid #ffe27a}
+.noitem-tag{font:13px Jua;background:#1d2340;color:#fff;border-radius:999px;padding:0 8px}
+.confirm .panel .trapd{background:#f3eaff;border:2px solid #9b5cff;border-radius:10px;padding:5px 8px;font:600 12.5px/1.4 Pretendard;color:#43238a;margin:0 0 10px;text-align:left}
+.ni-row{display:flex;align-items:center;gap:8px;font:13px Jua;padding:2px 4px}
+.ni-row small{color:var(--ink2);font:500 11px Pretendard}
+.switch{cursor:pointer}
+.switch.off i{background:#c7cce0}
+.switch.off i:after{right:auto;left:2px}
+.confirm .row{flex-wrap:wrap;gap:6px}
+.phone .confirm .row .btn{font-size:13px;padding:5px 10px}
+.phone .confirm .panel{max-width:94%}
