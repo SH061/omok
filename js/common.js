@@ -122,6 +122,19 @@ async function loadSettings() {
   const { data } = await sb.from("omok_settings").select("*");
   if (data) data.forEach(r => DATA.settings[r.id] = r.value);
 }
+/* 실시간 연결이 막힌 폰도 보이도록, DB에 적힌 "최근 20초 안에 있었던 사람" 목록 */
+async function loadPresence() {
+  const since = new Date(now() - 20000).toISOString();
+  const { data } = await sb.from("omok_presence").select("*").gte("seen", since);
+  if (data) DATA.pres = data;
+}
+function mergePresence(live, me) {
+  const o = {};
+  for (const r of DATA.pres || []) o[r.sid] = { id: r.sid, name: r.name, x: r.x, y: r.y };
+  for (const [k, v] of Object.entries(live || {})) { const m = v[v.length - 1]; if (m) o[k] = m; }
+  if (me) o[me.id] = o[me.id] || { id: me.id, name: me.name, x: me.x, y: me.y };
+  return o;
+}
 async function loadQueue() { const { data } = await sb.from("omok_queue").select("*").order("joined_at"); if (data) DATA.queue = data; }
 async function loadMatches() { const { data } = await sb.from("omok_matches").select("*").order("round").order("slot"); if (data) DATA.matches = data; }
 const curGameId = () => { const v = DATA.settings.current_game; return v == null || v === "null" ? null : Number(v); };

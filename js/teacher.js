@@ -34,7 +34,7 @@ async function start() {
   T.tab = LS.get("omok_ttab") || "live";
   render();
   ping(); setInterval(ping, 10000);
-  setInterval(loop, 300); setInterval(poll, 4000); setInterval(syncTime, 60000);
+  setInterval(loop, 300); setInterval(poll, 4000); setInterval(() => loadPresence().then(() => { renderSide(); if (T.tab === "room") updateWalkers(); }), 4000); loadPresence(); setInterval(syncTime, 60000);
 }
 const ping = () => sb.rpc("omok_t_ping", { p_token: T.token }).then(() => {}, () => {});
 async function loadStudents() { try { T.stu = await rpc("omok_t_students", { p_token: T.token }); } catch (e) { if (e.code === "teacher_only") { LS.del("omok_ttoken"); location.reload(); } } }
@@ -64,7 +64,7 @@ function joinPlaza() {
   plazaCh.on("presence", { event: "sync" }, () => { T.presence = plazaCh.presenceState(); renderSide(); if (T.tab === "room") updateWalkers(); if (T.tab === "students") render(); })
     .subscribe(st => { if (st === "SUBSCRIBED") plazaCh.track({ id: "teacher", name: "선생님", x: 50, y: 70 }).catch(() => {}); });
 }
-const online = () => { const o = {}; for (const [k, v] of Object.entries(T.presence)) { const m = v[v.length - 1]; if (m) o[k] = m; } return o; };
+const online = () => mergePresence(T.presence, null);
 
 /* ─── 게임 ─── */
 async function enterGame(id) {
@@ -197,7 +197,7 @@ function updateWalkers() {
   const on = online(), qs = new Set(DATA.queue.map(q => q.sid)), B = T.bubbles || {}, sz = vert() ? 36 : 50;
   box.innerHTML = Object.entries(on).map(([id, p]) => {
     const isT = id === "teacher", s = stu(id), b = B[id] && B[id].until > Date.now() ? B[id] : null;
-    const x = isT ? 50 : p.x, y = Math.max(64, Math.min(95, isT ? 70 : p.y));
+    const x = isT ? 50 : p.x, y = Math.max(64, Math.min(86, isT ? 70 : p.y));
     return `<div class="walker ${isT ? "is-t" : "clickable"}" data-act="${isT ? "" : "wsel"}" data-id="${esc(id)}" style="left:${x}%;top:${y}%;z-index:${3 + Math.round(y)}">${b ? `<div class="bubble ${isT ? "t" : ""}">${esc(b.text)}</div>` : qs.has(id) ? `<div class="q-badge">🎲 매칭 대기</div>` : ""}<div class="who">${isT ? avatar("T-0001", sz * 1.1, "#2b3366") : av(id, sz)}<span class="nametag">${isT ? "🧑‍🏫 선생님" : esc(s.name)}${s.muted ? " 🔇" : ""}</span></div></div>`;
   }).join("");
 }

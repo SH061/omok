@@ -169,7 +169,7 @@ async function startApp() {
   const gid = curGameId();
   if (gid) await enterGame(gid); else { S.screen = "plaza"; render(); }
   setInterval(loop, 250);
-  setInterval(poll, 4000);
+  setInterval(poll, 4000); setInterval(syncPresence, 4000); syncPresence();
   setInterval(loadRoster, 30000);
   setInterval(syncTime, 60000);
 }
@@ -208,8 +208,19 @@ function joinPlaza() {
   plazaCh.on("presence", { event: "sync" }, () => { S.presence = plazaCh.presenceState(); if (S.screen === "plaza") { updateWalkers(); renderPlazaHud(); } })
     .subscribe(async st => { if (st === "SUBSCRIBED") trackMe(); });
 }
-function trackMe() { plazaCh?.track({ id: S.me.id, name: S.me.name, x: S.pos.x, y: S.pos.y, t: Date.now() }).catch(() => {}); }
-const online = () => { const o = {}; for (const [k, v] of Object.entries(S.presence)) { const m = v[v.length - 1]; if (m) o[k] = m; } return o; };
+function trackMe() { pingPos(true); plazaCh?.track({ id: S.me.id, name: S.me.name, x: S.pos.x, y: S.pos.y, t: Date.now() }).catch(() => {}); }
+const online = () => mergePresence(S.presence, S.pos && S.me ? { id: S.me.id, name: S.me.name, x: S.pos.x, y: S.pos.y } : null);
+/* 몇 초마다 "나 여기 있어요" + 다른 사람 위치 읽기 (실시간 연결이 안 되는 폰 대비) */
+let lastPingAt = 0;
+async function pingPos(force) {
+  if (!S.token || !S.pos || (!force && Date.now() - lastPingAt < 4000)) return;
+  lastPingAt = Date.now();
+  try { await sb.rpc("omok_ping", { p_token: S.token, p_x: S.pos.x, p_y: S.pos.y }); } catch (e) {}
+}
+async function syncPresence() {
+  await pingPos(); await loadPresence();
+  if (S.screen === "plaza") { updateWalkers(); renderPlazaHud(); }
+}
 
 function plazaHTML() {
   const P = S.dev === "phone";
@@ -227,11 +238,26 @@ function renderPlazaHud() {
   if (hud._h !== hudHtml) { hud._h = hudHtml; hud.innerHTML = hudHtml; }
   renderMenu(); renderMatchWait();
 }
-function floorY(y) { return S.vert ? Math.max(58, Math.min(93, y)) : Math.max(64, Math.min(95, y)); }
+/* 캐릭터(발+이름표)가 아래 채팅창에 가려지지 않도록 바닥의 아래쪽 한계를 화면 크기에 맞춤 */
+function floorY(y) {
+  const reserve = S.vert ? 96 : S.dev === "phone" ? 70 : 92;   // 채팅창 + 여유 (무대 px)
+  const max = Math.min(93, (S.H - reserve) / S.H * 100), min = S.vert ? 58 : 64;
+  return Math.max(min, Math.min(max, +y || max));
+}
+/* 서로 겹쳐 서 있으면 옆으로 살짝 벌려서 둘 다 보이게 */
+function spreadSpots(list) {
+  const placed = [];
+  return list.map(([id, x, y]) => {
+    let nx = x, tries = 0;
+    while (tries < 8 && placed.some(p => Math.abs(p[0] - nx) < 7 && Math.abs(p[1] - y) < 6)) { nx = x + (tries % 2 ? -1 : 1) * 7 * Math.ceil((tries + 1) / 2); tries++; }
+    nx = Math.max(4, Math.min(96, nx)); placed.push([nx, y]); return [id, nx, y];
+  });
+}
 function updateWalkers() {
   const box = $("#walkers"); if (!box) return;
   const on = online(), sz = S.vert ? 40 : S.dev === "phone" ? 32 : 54, seen = new Set();
   const qset = new Set(DATA.queue.map(q => q.sid));
+  const spots = {}; spreadSpots(Object.entries(on).sort((a, b) => a[0].localeCompare(b[0])).map(([id, m]) => [id, id === S.me.id ? S.pos.x : m.x ?? 50, floorY(id === S.me.id ? S.pos.y : m.y ?? 80)])).forEach(([id, x, y]) => spots[id] = [x, y]);
   for (const [id, m] of Object.entries(on)) {
     seen.add(id);
     let el = box.querySelector(`[data-w="${CSS.escape(id)}"]`);
@@ -240,10 +266,10 @@ function updateWalkers() {
       el = document.createElement("div"); el.dataset.w = id;
       el.className = "walker" + (isMe ? " me" : "") + (isT ? " is-t" : "");
       el.innerHTML = `<div class="xb"></div><div class="who">${isT ? avatar("T-0001", sz * 1.05, "#2b3366") : av(id, sz)}<span class="nametag">${isMe ? "⭐ " : isT ? "🧑‍🏫 " : ""}${esc(isT ? "선생님" : (m.name || nameOf(id)))}</span></div>`;
-      el.style.left = (m.x ?? 50) + "%"; el.style.top = floorY(m.y ?? 80) + "%";
+      el.style.left = (spots[id][0]) + "%"; el.style.top = spots[id][1] + "%";
       box.appendChild(el);
     }
-    const x = isMe ? S.pos.x : m.x, y = floorY(isMe ? S.pos.y : m.y);
+    const [x, y] = spots[id];
     if (el.style.left !== x + "%" || el.style.top !== y + "%") {
       el.classList.add("moving"); clearTimeout(el._mv); el._mv = setTimeout(() => el.classList.remove("moving"), 1400);
       el.style.left = x + "%"; el.style.top = y + "%";
