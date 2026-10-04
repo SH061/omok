@@ -495,6 +495,7 @@ function boardScreen(G) {
   let over = "";
   if (myTurn && G.phase === "quiz" && G.quiz) over = quizHTML(G);
   else if (G.phase === "mission" && G.mission) over = missionHTML(G);
+  else if (myTurn && G.phase === "action" && !S.pick && (S.view?.hand || []).length > 2) over = chooseHTML(G);
   if (S.vert) {
     const bottom = player ? handRowHTML(G, mt, myTurn) : chatboxHTML();
     const last1 = S.feed.length ? `<div class="feed1">${esc(S.feed[S.feed.length - 1])}</div>` : "";
@@ -516,6 +517,18 @@ function handHTML(G, mt, myTurn) {
   const peek = S.view?.peek && S.view.peek.turn_no >= G.turn_no - 2 ? `<div class="peek">🔭 상대 카드: ${(S.view.peek.cards || []).map(c => `<img src="${cardImg(c.k)}" title="${CARD[c.k][0]}">`).join("") || "없음"}</div>` : "";
   return `<div class="handbox"><div class="lbl">🃏 우리 팀 카드함${PH ? "" : " (팀원만 보여요)"}</div><div class="cards hand-cards">${cards}</div>${note}${peek}
     ${S.pick ? `<div class="acts"><button class="btn xs gray" data-act="cancelpick">카드 취소</button></div>` : ""}</div>`;
+}
+/* 카드가 3장일 때: 쓰거나 버릴 카드를 직접 고르는 창 (하나를 처리해야 돌을 놓을 수 있음) */
+function chooseHTML(G) {
+  const hand = S.view.hand, n = hand.length;
+  const canUse = !G.turn?.card && !(G.turn?.placed > 0);
+  const w = S.vert ? 94 : S.dev === "phone" ? 92 : 150;
+  const items = hand.map(c => `<div class="citem">${card(c.k, { w, cls: "shine", attrs: `data-info="${c.k}"` })}<div class="cname">${esc(CARD[c.k][0])}</div>
+    <div class="cbtns">${canUse && c.k !== "shield" ? `<button class="btn xs red" data-use="${c.u}">⚡ 사용</button>` : ""}<button class="btn xs gray" data-discard="${c.u}">🗑 버리기</button></div>
+    ${c.k === "shield" ? `<div class="cnote">자동으로 막아줘요</div>` : ""}</div>`).join("");
+  return `<div class="dim choose"><div class="panel choose-box"><div class="ct">🃏 카드가 ${n}장이에요!</div>
+    <div class="cd">카드함은 2장까지예요. <b>하나를 쓰거나 버려야</b> 돌을 놓을 수 있어요.${canUse ? "" : " (이번 차례엔 이미 카드를 써서 버리기만 할 수 있어요)"}</div>
+    <div class="crow">${items}</div><div class="chint">카드 그림을 누르면 설명을 볼 수 있어요</div></div></div>`;
 }
 function handRowHTML(G, mt, myTurn) {
   const hand = S.view?.hand || [];

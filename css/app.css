@@ -217,3 +217,28 @@ body.tbody{background:#eef1fb;min-height:100vh;overflow:hidden}
 .dd:not(.fresh){animation:none}
 /* 세로 교실: 바닥까지 한 장으로 이어진 그림 */
 .vert .roombg{background:url(../assets/ui/classroom_v.webp) 50% 40%/cover no-repeat!important}
+/* 카드가 3장일 때 쓰거나 버릴 카드 고르는 창 */
+.dim.choose{z-index:18}
+.choose-box{width:96%;max-width:640px;padding:14px 16px 10px;text-align:center;animation:pop .25s}
+.choose-box .ct{font:26px 'Black Han Sans';color:var(--ink)}
+.choose-box .cd{font:600 14px/1.45 Pretendard;color:var(--ink2);margin:4px 0 12px;word-break:keep-all}
+.choose-box .cd b{color:var(--red-d)}
+.choose-box .crow{display:flex;gap:14px;justify-content:center;align-items:flex-start}
+.choose-box .citem{display:flex;flex-direction:column;align-items:center;gap:5px}
+.choose-box .citem .cimg{cursor:pointer}
+.choose-box .cname{font:15px Jua}
+.choose-box .cbtns{display:flex;gap:4px;justify-content:center}
+.choose-box .cbtns .btn{font-size:14px;padding:4px 10px}
+.choose-box .cnote{font:11px Jua;color:var(--ink2)}
+.choose-box .chint{font:12px Jua;color:var(--ink2);margin-top:8px}
+.phone .choose-box{padding:8px 12px 6px}
+.phone .choose-box .ct{font-size:20px}
+.phone .choose-box .cd{font-size:12px;margin:2px 0 6px}
+.phone .choose-box .crow{gap:10px}
+.phone .choose-box .cname{font-size:12px}
+.phone .choose-box .cbtns .btn{font-size:12px;padding:3px 8px}
+.phone .choose-box .chint{display:none}
+.vert .choose-box .crow{gap:8px}
+.vert .choose-box{padding:14px 10px 10px}
+.choose-box .cimg.gold{margin-bottom:12px}.phone .choose-box .cimg.gold{margin-bottom:9px}
+.phone .choose-box .cbtns{flex-direction:column;align-items:stretch;width:100%}.phone .choose-box .cbtns .btn{width:100%}
