@@ -86,43 +86,47 @@ function startGate() {
 document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement) goFull.locked = false; setTimeout(relayout, 200); });
 
 /* ═══ 로그인 ═══ */
-/* 세로 로그인: 태블릿 첫 화면에서 로고+로그인 창 부분만 잘라 세로로 배치 (입력칸이 커짐) */
-function loginVertHTML() {
-  const cw = 360, s = cw / 365, ch = Math.round(545 * s), top = Math.max(40, Math.round((S.H - ch) * .32));
-  const fld = (cls, id, extra, ph, t, l = 8.3, w = 83.6) => `<input class="fld ${cls}" id="${id}" ${extra} placeholder="${ph}" style="left:${l}%;width:${w}%;top:${t}%;height:7%;font-size:17px">`;
-  return `<div class="lwrap"><div class="lbg"></div>
-    <div class="wclock" style="left:86%;top:${Math.max(4, top / S.H * 100 - 3)}%">${wallClock(44)}</div>
-    <form class="login2 vcol" id="loginForm" autocomplete="off" style="left:${(S.W - cw) / 2}px;top:${top}px;width:${cw}px;height:${ch}px">
-      <div class="art" style="background-size:${1024 * s}px auto;background-position:${-330 * s}px ${-35 * s}px"></div>
-      ${fld("f1", "lid", `data-label="학번" inputmode="numeric" maxlength="10" value="${esc(LS.get("omok_lastid") || "")}"`, "학번 (예: 10106)", 48.6)}
-      ${fld("f2", "lname", `data-label="이름" maxlength="20"`, "이름", 61.8)}
-      ${fld("f3", "lbirth", `data-label="생일 8자리 (예: 20090315)" type="password" inputmode="numeric" maxlength="10"`, "생일 8자리 (예: 20090315)", 74.9)}
-      <button class="go" type="submit" aria-label="우리반 입장" style="left:7.8%;width:84.8%;top:84.8%;height:9.6%"></button>
-    </form>
-    <div class="lmsg" id="lmsg" style="top:${top + ch + 6}px"></div>
-    <div class="lcard" style="left:24%;top:${Math.min(90, (top + ch + 110) / S.H * 100)}%;transform:translate(-50%,-50%) rotate(-9deg)">${card("roulette", { w: 96 })}</div>
-    <div class="lcard sm" style="left:76%;top:${Math.min(90, (top + ch + 110) / S.H * 100)}%;transform:translate(-50%,-50%) rotate(7deg)">${card("swap", { w: 86 })}</div>
-    <a class="tlink" href="teacher.html">교사</a></div>`;
+/* 첫 화면: 고해상도 그림(1125×2000) 위에 진짜 입력칸을 같은 자리에 얹음. 좌표는 그림 픽셀 기준 */
+const LV = { W: 1125, H: 2000, clock: [994, 84, 136] };
+const LV_FIELDS = [
+  { id: "lid", x: 110, y: 934, w: 905, h: 100, label: "학번", ph: "학번 (예: 10106)", extra: 'inputmode="numeric" maxlength="10"' },
+  { id: "lname", x: 103, y: 1158, w: 919, h: 105, label: "이름", ph: "이름", extra: 'maxlength="20"' },
+  { id: "lbirth", x: 103, y: 1385, w: 919, h: 104, label: "생일 8자리 (예: 20090315)", ph: "생일 8자리 (예: 20090315)", extra: 'type="password" inputmode="numeric" maxlength="10"' }
+];
+const LV_GO = { x: 92, y: 1540, w: 938, h: 155 };
+const fadeMask = (l, r, t, b) => {
+  const g = [];
+  if (l || r) g.push(`linear-gradient(to right,${l ? `transparent,#000 ${l}px` : "#000,#000 0"},${r ? `#000 calc(100% - ${r}px),transparent` : "#000,#000"})`);
+  if (t || b) g.push(`linear-gradient(to bottom,${t ? `transparent,#000 ${t}px` : "#000,#000 0"},${b ? `#000 calc(100% - ${b}px),transparent` : "#000,#000"})`);
+  return g.length ? `-webkit-mask-image:${g.join(",")};mask-image:${g.join(",")};-webkit-mask-composite:source-in;mask-composite:intersect;` : "";
+};
+function loginParts(ox, oy, s) {
+  const last = esc(LS.get("omok_lastid") || "");
+  const f = LV_FIELDS.map(q => `<input class="fld" id="${q.id}" data-label="${q.label}" ${q.extra} placeholder="${q.ph}" ${q.id === "lid" && last ? `value="${last}"` : ""} style="left:${(q.x - ox) * s}px;top:${(q.y - oy) * s}px;width:${q.w * s}px;height:${q.h * s}px;font-size:${Math.max(11, 44 * s)}px;border-radius:${36 * s}px;padding:0 ${40 * s}px">`).join("");
+  const go = `<button class="go" type="submit" aria-label="우리반 입장" style="left:${(LV_GO.x - ox) * s}px;top:${(LV_GO.y - oy) * s}px;width:${LV_GO.w * s}px;height:${LV_GO.h * s}px"></button>`;
+  const msg = `<div class="lmsg" id="lmsg" style="left:${(120 - ox) * s}px;top:${(748 - oy) * s}px;width:${885 * s}px;height:${74 * s}px;font-size:${Math.max(10, 36 * s)}px;line-height:${74 * s}px"></div>`;
+  return f + go + msg;
 }
 function loginHTML() {
-  if (S.vert) return loginVertHTML();
-  const ph = S.dev === "phone";
-  const ratio = ph ? 1346 / 622 : 1024 / 707;
-  const w = Math.min(S.W, S.H * ratio), h = w / ratio;
-  const clock = ph ? `<div class="wclock" style="left:79.2%;top:8.8%">${wallClock(34)}</div>` : `<div class="wclock" style="left:88.4%;top:13.4%">${wallClock(60)}</div>`;
-  const cards = ph ? `<div class="lcard" style="left:20.2%;top:83.3%;transform:translate(-50%,-50%) rotate(-9deg)">${card("roulette", { w: 92 })}</div>
-     <div class="lcard sm" style="left:79.7%;top:40.2%;transform:translate(-50%,-50%) rotate(5deg)">${card("swap", { w: 82 })}</div>`
-    : `<div class="lcard" style="left:10.85%;top:78.9%;transform:translate(-50%,-50%) rotate(-9deg)">${card("roulette", { w: 166 * w / 1180 })}</div>
-     <div class="lcard" style="left:89.06%;top:41%;transform:translate(-50%,-50%) rotate(5deg)">${card("swap", { w: 150 * w / 1180 })}</div>`;
-  const fs = ph ? 12 : Math.round(19 * w / 1180);
-  return `<div class="lwrap"><div class="lbg"></div><div class="lbox" style="width:${w}px;height:${h}px">
-    <form class="login2 ${ph ? "ph" : ""}" id="loginForm" autocomplete="off"><div class="art"></div>${clock}${cards}
-      <input class="fld f1" id="lid" data-label="학번" inputmode="numeric" maxlength="10" placeholder="학번 (예: 10106)" style="font-size:${fs}px" value="${esc(LS.get("omok_lastid") || "")}">
-      <input class="fld f2" id="lname" data-label="이름" maxlength="20" placeholder="이름" style="font-size:${fs}px">
-      <input class="fld f3" id="lbirth" data-label="생일 8자리 (예: 20090315)" type="password" inputmode="numeric" placeholder="생일 8자리 (예: 20090315)" style="font-size:${fs}px" maxlength="10">
-      <button class="go" type="submit" aria-label="우리반 입장"></button>
-      <div class="lmsg" id="lmsg"></div></form></div>
-    <a class="tlink" href="teacher.html">교사</a></div>`;
+  const sideBtn = `<a class="tlink" href="teacher.html">교사</a>`;
+  const landPhone = S.dev === "phone" && !S.vert;
+  if (!landPhone) {
+    // 세로 휴대폰·태블릿: 그림 전체를 가로폭(또는 높이)에 맞춰 가운데에
+    const w = Math.min(S.W, S.H * LV.W / LV.H), h = w * LV.H / LV.W, s = w / LV.W;
+    const left = (S.W - w) / 2, top = Math.max(0, S.H - h); // 그림을 화면 맨 아래에 붙임 (남는 위쪽은 흐린 배경)
+    const fx = w < S.W - 1 ? 30 : 0, fy = h < S.H - 1 ? 36 : 0;
+    const [cx, cy, cd] = LV.clock, d = cd * s;
+    const clock = `<div class="wclock" style="left:${cx * s}px;top:${cy * s}px">${wallClock(d)}</div>`;
+    return `<div class="lwrap"><div class="lbg"></div><form class="lg2 art-v" id="loginForm" autocomplete="off" style="left:${left}px;top:${top}px;width:${w}px;height:${h}px;${fadeMask(fx, fx, fy, 0)}">${clock}${loginParts(0, 0, s)}</form>${sideBtn}</div>`;
+  }
+  // 가로로 든 휴대폰: 같은 그림에서 로고와 로그인 창을 따로 잘라 나란히
+  const P = { x0: 10, y0: 600, x1: 1115, y1: 1790 }, sp = S.H / (P.y1 - P.y0), pw = (P.x1 - P.x0) * sp, pl = S.W - pw - 10;
+  const L = { x0: 20, y0: 154, x1: 1105, y1: 622 }, avail = pl - 16, sl = Math.min(avail / (L.x1 - L.x0), (S.H * .62) / (L.y1 - L.y0)), lw = (L.x1 - L.x0) * sl, lh = (L.y1 - L.y0) * sl;
+  const bg = (r, s, w, h) => `width:${w}px;height:${h}px;background-image:url(assets/ui/login_v.webp);background-repeat:no-repeat;background-size:${LV.W * s}px ${LV.H * s}px;background-position:${-r.x0 * s}px ${-r.y0 * s}px;`;
+  return `<div class="lwrap"><div class="lbg"></div>
+    <div class="lg2-logo" style="left:${(pl - lw) / 2 - 2}px;top:${(S.H - lh) / 2 - 6}px;width:${lw}px;height:${lh}px;background-size:${LV.W * sl}px ${LV.H * sl}px,100% 100%;background-position:${-L.x0 * sl}px ${-L.y0 * sl}px,0 0"></div>
+    <div class="wclock" style="left:7%;top:13%">${wallClock(36)}</div>
+    <form class="lg2" id="loginForm" autocomplete="off" style="left:${pl}px;top:0;${bg(P, sp, pw, S.H)}${fadeMask(12, 12, 14, 0)}">${loginParts(P.x0, P.y0, sp)}</form>${sideBtn}</div>`;
 }
 async function doLogin(ev) {
   ev.preventDefault();

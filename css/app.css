@@ -194,3 +194,22 @@ body.tbody{background:#eef1fb;min-height:100vh;overflow:hidden}
 .vert .mission-box{width:92%}
 .vert .fx .big{font-size:32px}
 .vert .match-card{width:92%}
+/* ═══ 새 첫 화면 (고해상도 그림 + 같은 자리의 입력칸) ═══ */
+:root{--loginv:url(../assets/ui/login_v.webp)}
+.lg2{position:absolute}
+.lg2.art-v{background:var(--loginv) center/100% 100% no-repeat}
+.lg2-logo{position:absolute;border:5px solid transparent;border-radius:22px;box-sizing:content-box;
+  background-image:url(../assets/ui/login_v.webp),var(--metal);background-repeat:no-repeat;background-origin:padding-box,border-box;background-clip:padding-box,border-box;
+  box-shadow:0 0 0 2px #243a66,0 10px 26px #000a,0 0 24px #7fc8ff55}
+.lg2 .fld{position:absolute;box-sizing:border-box;border:0;background:#e9edf3;color:#1d2340;font-family:Pretendard,sans-serif;font-weight:600;outline:none;-webkit-appearance:none;appearance:none}
+.lg2 .fld::placeholder{color:#8c98c8;font-weight:600;letter-spacing:0}
+.lg2 .fld:focus{box-shadow:0 0 0 3px #7fc8ffcc}
+.lg2 .go{position:absolute;border:0;background:transparent;cursor:pointer;border-radius:16px}
+.lg2 .go:active{background:#ffffff33}
+.lg2 .lmsg{position:absolute;text-align:center;color:#fff;background:#1d2340e6;border-radius:999px;font-family:Jua,sans-serif;overflow:hidden;white-space:nowrap}
+.lg2 .lmsg:empty{display:none}
+.lg2 .wclock,.lwrap>.wclock{position:absolute;transform:translate(-50%,-50%);filter:drop-shadow(0 4px 6px #0006)}
+.lwrap .lbg{background-image:var(--loginimg)}
+.vert .lwrap .lbg{background-image:var(--loginv)}
+#gate{background:radial-gradient(circle,#10142ecc,#05071aee),var(--loginv) center/cover}
+.vert .lwrap .lbg{filter:blur(10px) brightness(.95) saturate(1.1)}
