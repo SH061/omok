@@ -85,8 +85,11 @@ const back = (cls = "") => `<div class="cback ${cls}"></div>`;
 
 /* ─── 임시 캐릭터 (학번으로 모양이 정해짐) ─── */
 function hash(s) { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; }
+/* assets/avatars/<학번>.webp 그림이 있는 학생: 학생 명단에 주소를 따로 안 적어도 자동으로 이 그림을 씀 */
+const AVATAR_FILES = new Set(["10101"]);
 function avatar(id, size = 60, shirt, url) {
-  if (url) return `<img class="avatar av-img" src="${esc(url)}" style="width:${size}px;height:${size * 1.2}px;object-fit:contain" alt="">`;
+  if (!url && AVATAR_FILES.has(String(id))) url = `assets/avatars/${id}.webp`;
+  if (url) return `<img class="avatar av-img" src="${esc(url)}" style="width:${size}px;height:${size * 1.2}px;object-fit:contain;border-radius:50%;filter:drop-shadow(0 2px 2px #0006)" alt="">`;
   const h = hash(id), p = (n, m) => Math.floor(h / n) % m;
   const skin = ["#ffe0c2", "#f9d2ae", "#f1c197", "#e8b184"][p(1, 4)], hair = ["#1d1b26", "#3b2a20", "#5a3a22", "#2b2f4a", "#6b4a2e"][p(7, 5)];
   const style = p(31, 5), glasses = p(97, 4) === 0, mouth = p(211, 3), brow = p(13, 2);
