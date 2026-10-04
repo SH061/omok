@@ -213,3 +213,7 @@ body.tbody{background:#eef1fb;min-height:100vh;overflow:hidden}
 .vert .lwrap .lbg{background-image:var(--loginv)}
 #gate{background:radial-gradient(circle,#10142ecc,#05071aee),var(--loginv) center/cover}
 .vert .lwrap .lbg{filter:blur(10px) brightness(.95) saturate(1.1)}
+/* 메뉴는 열 때 한 번만 튀어나오고, 자동으로 다시 그려질 때는 움직이지 않음 */
+.dd:not(.fresh){animation:none}
+/* 세로 교실: 바닥까지 한 장으로 이어진 그림 */
+.vert .roombg{background:url(../assets/ui/classroom_v.webp) 50% 40%/cover no-repeat!important}

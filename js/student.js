@@ -222,11 +222,12 @@ function renderPlazaHud() {
   const hud = $("#hud"); if (!hud) return;
   const on = DATA.settings.game_enabled !== false && DATA.settings.game_enabled !== "false";
   const n = Object.keys(online()).filter(k => k !== "teacher").length;
-  hud.innerHTML = `<span class="plate">🏫 우리반</span><span class="chip ${on ? "green" : "gray"}">${on ? "🎮 게임 가능" : "⛔ 게임 쉬는 중"}</span><span class="chip">👥 ${n}명</span>
+  const hudHtml = `<span class="plate">🏫 우리반</span><span class="chip ${on ? "green" : "gray"}">${on ? "🎮 게임 가능" : "⛔ 게임 쉬는 중"}</span><span class="chip">👥 ${n}명</span>
     ${S.vert ? "" : `<span class="me-chip" id="mechip">${av(S.me.id, 24)}${esc(S.me.name)}</span>`}<button class="btn sm ${S.menu ? "gold" : "white"} menu-btn" id="menubtn" ${S.vert ? 'style="margin-left:auto"' : ""}>${S.menu ? "✕" : "☰"}${S.dev === "phone" ? "" : " 메뉴"}</button>`;
+  if (hud._h !== hudHtml) { hud._h = hudHtml; hud.innerHTML = hudHtml; }
   renderMenu(); renderMatchWait();
 }
-function floorY(y) { return S.vert ? Math.max(70, Math.min(92, y)) : Math.max(64, Math.min(95, y)); }
+function floorY(y) { return S.vert ? Math.max(58, Math.min(93, y)) : Math.max(64, Math.min(95, y)); }
 function updateWalkers() {
   const box = $("#walkers"); if (!box) return;
   const on = online(), sz = S.vert ? 40 : S.dev === "phone" ? 32 : 54, seen = new Set();
@@ -265,7 +266,7 @@ function onPlazaTap(e) {
 /* 오른쪽 위 메뉴 */
 function renderMenu() {
   const w = $("#menuwrap"); if (!w) return;
-  if (!S.menu) { w.innerHTML = ""; return; }
+  if (!S.menu) { w._h = ""; w.innerHTML = ""; return; }
   const on = DATA.settings.game_enabled !== false && DATA.settings.game_enabled !== "false";
   const busy = !!curGameId(), dis = !on || busy ? "disabled" : "";
   const inQ = DATA.queue.find(q => q.sid === S.me.id);
@@ -279,13 +280,20 @@ function renderMenu() {
     <button class="btn sm white" data-ov="dex">🃏 카드 도감</button>
     <button class="btn xs gray" data-act="logout" style="align-self:flex-end">로그아웃</button></div>`;
   const people = `<div class="dd-body"><div class="ol-list">${DATA.roster.map(s => `<div class="ol ${ol[s.id] ? "" : "off"}"><span class="dot" style="${ol[s.id] ? "" : "background:#b9bfd6"}"></span>${av(s.id, 18)}${esc(s.name)}<span class="gn">${s.grp ? esc(grpName(s.grp)) : ""}</span></div>`).join("")}</div></div>`;
-  w.innerHTML = `<div class="dd">${item("game", "🎮", "게임하기", "연습 · 대진표", game)}${item("online", "👥", "접속인원", `${nOn} / ${DATA.roster.length}명`, people)}</div>`;
+  const fresh = S.menuFresh; S.menuFresh = false;
+  const html = `<div class="dd${fresh ? " fresh" : ""}">${item("game", "🎮", "게임하기", "연습 · 대진표", game)}${item("online", "👥", "접속인원", `${nOn} / ${DATA.roster.length}명`, people)}</div>`;
+  // 몇 초마다 자동으로 다시 불려도(접속인원 변화 등) 내용이 같으면 그대로 두어 깜빡이지 않게
+  const key = html.replace(' fresh', "");
+  if (w._h === key && !fresh) return;
+  const keepScroll = w.querySelector(".dd")?.scrollTop || 0;
+  w._h = key; w.innerHTML = html;
+  const dd = w.querySelector(".dd"); if (dd && keepScroll) dd.scrollTop = keepScroll;
 }
 /* 매칭 대기 창 */
 function renderMatchWait() {
   const w = $("#dimwrap"); if (!w) return;
   const q = DATA.queue.find(x => x.sid === S.me.id);
-  if (!q || curGameId()) { w.innerHTML = ""; return; }
+  if (!q || curGameId()) { w._h = ""; w.innerHTML = ""; return; }
   const same = DATA.queue.filter(x => x.mode === q.mode);
   const need = q.mode === "solo" ? 2 : q.mode === "random" ? 6 : 0;
   let seats = "", line = "";
@@ -301,7 +309,8 @@ function renderMatchWait() {
   }
   const title = { solo: "⚔️ 1:1 빠른 매칭", random: "🎲 3:3 랜덤 매칭", group: "🛡️ 조별 연습" }[q.mode];
   const sub = { solo: "2명이 모이면 바로 시작해요", random: "6명이 모이면 팀을 무작위로 나눠요", group: "조원 2명 이상 + 상대 조가 모이면 시작해요" }[q.mode];
-  w.innerHTML = `<div class="dim"><div class="match-card panel"><div style="font:26px Jua">${title}</div><div style="font:15px Jua;color:var(--ink2)">${sub}</div><div class="spinner"></div><div class="seats">${seats}</div><div style="font:17px Jua;margin-bottom:10px">${line}</div><button class="btn gray" data-act="leaveq">매칭 취소</button></div></div>`;
+  const mhtml = `<div class="dim"><div class="match-card panel"><div style="font:26px Jua">${title}</div><div style="font:15px Jua;color:var(--ink2)">${sub}</div><div class="spinner"></div><div class="seats">${seats}</div><div style="font:17px Jua;margin-bottom:10px">${line}</div><button class="btn gray" data-act="leaveq">매칭 취소</button></div></div>`;
+  if (w._h !== mhtml) { w._h = mhtml; w.innerHTML = mhtml; }
 }
 function onQueue() { if (S.screen === "plaza") { renderMatchWait(); updateWalkers(); if (S.menu === "game") renderMenu(); } }
 
@@ -568,7 +577,7 @@ stage.addEventListener("click", async e => {
   if (S.screen === "plaza" && t.id === "roombg") { S.menu = null; renderMenu(); renderPlazaHud(); onPlazaTap(e); return; }
   const el = t.closest("[data-act],[data-menu],[data-q],[data-ov],[data-card],[data-use],[data-discard],[data-ans],[data-info],.cell,#menubtn");
   if (!el) return;
-  if (el.id === "menubtn") { S.menu = S.menu ? null : "game"; renderPlazaHud(); return; }
+  if (el.id === "menubtn") { S.menu = S.menu ? null : "game"; S.menuFresh = !!S.menu; renderPlazaHud(); return; }
   if (el.dataset.menu) { S.menu = S.menu === el.dataset.menu ? null : el.dataset.menu; renderPlazaHud(); return; }
   if (el.dataset.q) { if (el.disabled) return; try { await rpc("omok_queue_join", { p_token: S.token, p_mode: el.dataset.q }); S.menu = null; await loadQueue(); renderPlazaHud(); } catch (er) { toast(er.message, "err"); } return; }
   if (el.dataset.ov) { S.overlay = el.dataset.ov === "dex" ? "dexc" : el.dataset.ov; S.menu = null; render(); return; }
